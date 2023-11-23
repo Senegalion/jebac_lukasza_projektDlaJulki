@@ -41,11 +41,14 @@ def parse_marker_string(marker_string):
     marker_list = marker_string.split('#')[1:]  # Split the string by '#' and remove the empty first element
     markers = []
     for marker in marker_list:
+        is_front = False
         marker_info = marker.split('$')[1].split('[')
         id = int(marker_info[0])
         coords = marker_info[1].strip(']').split(',')
         x, y, z = map(float, coords)
-        markers.append(Marker(id, x, y, z, model_name, False))
+        if marker[-1] == "T":
+            is_front = True
+        markers.append(Marker(id, x, y, z, model_name, is_front))
 
     if(markers[0].model_name == "Platform"):    
         markers.remove(min(markers, key = lambda x : x.z))
@@ -84,7 +87,7 @@ def main():
         for marker in markers_list:
             print(marker)
         print("___________________________")
-        
+
     # markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
     #                 Marker(2, 0, 1, 0, "Targer", False)]
     
