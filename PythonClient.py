@@ -71,23 +71,24 @@ def recv_data(socket_server):
 def main():    
     platfrom_markers = []
     target_markers = []
-    # server = set_socket_server()
-    # while True:
-    #     print("___________________________")
-    #     markers_list = recv_data(server)
+    server = set_socket_server()
+    while True:
+        print("___________________________")
+        markers_list = recv_data(server)
 
-    #     if markers_list[0].model_name == "Platform":
-    #         platfrom_markers = markers_list
-    #     else:
-    #         target_markers = markers_list
+        if markers_list[0].model_name == "Platform":
+            platfrom_markers = markers_list
+        else:
+            target_markers = markers_list
 
-    #     for marker in markers_list:
-    #         print(marker)
-    #     print("___________________________")
-    markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
-                    Marker(2, 0, 0.4, 0, "Targer", False), Marker(3, 0, 0.2, 0, "Targer", False)]
+        for marker in markers_list:
+            print(marker)
+        print("___________________________")
+        
+    # markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
+    #                 Marker(2, 0, 1, 0, "Targer", False)]
     
-    print(Marker.center(markers_list))
+    # print(Marker.colinear(markers_list))
 
 
 if __name__ == "__main__":
