@@ -11,7 +11,10 @@ class Marker:
         self.model_name = model_name
     
     def print(self):
-        print("Model_name:{} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z))
+        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z))
+
+    def __str__(self):
+        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z)
 
 
 def parse_marker_string(marker_string):
@@ -53,7 +56,7 @@ def main():
         else:
             target_markers = markers_list
         for marker in markers_list:
-            marker.print()
+            print(marker)
         print("___________________________")
 
 if __name__ == "__main__":
