@@ -34,6 +34,7 @@ def recv_data(socket_server):
 
 def main():    
     server = set_socket_server()
+    print("STH")
     while True:
         print("___________________________")
         print(recv_data(server))
