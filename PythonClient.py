@@ -30,10 +30,10 @@ class Marker:
         return slope1 == slope2
 
     def print(self):
-        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z))
+        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front))
 
     def __str__(self):
-        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z)
+        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front)
 
 
 def parse_marker_string(marker_string):
@@ -46,8 +46,8 @@ def parse_marker_string(marker_string):
         id = int(marker_info[0])
         coords = marker_info[1].strip(']').split(',')
         x, y, z = map(float, coords)
-        if marker[-1] == "T":
-            is_front = True
+        # if marker[-1] == "T":
+        #     is_front = True
         markers.append(Marker(id, x, y, z, model_name, is_front))
 
     if(markers[0].model_name == "Platform"):    
@@ -67,7 +67,7 @@ def recv_data(socket_server):
     header = socket_server.recv(10).decode()
     message_length = int(header)
     data = socket_server.recv(message_length).decode()
-    #return data
+    return data
     markers_list = parse_marker_string(data)
     return markers_list
 
@@ -78,14 +78,15 @@ def main():
     while True:
         print("___________________________")
         markers_list = recv_data(server)
+        print(recv_data(server))
 
-        if markers_list[0].model_name == "Platform":
-            platfrom_markers = markers_list
-        else:
-            target_markers = markers_list
+        # if markers_list[0].model_name == "Platform":
+        #     platfrom_markers = markers_list
+        # else:
+        #     target_markers = markers_list
 
-        for marker in markers_list:
-            print(marker)
+        # for marker in markers_list:
+        #     print(marker)
         print("___________________________")
 
     # markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
