@@ -3,6 +3,8 @@ import time
 from threading import Thread
 from rplidar import RPLidar
 import math
+import PythonClient as PC
+from queue import Queue
 
 run = True
 direction = "x"
@@ -12,6 +14,8 @@ serialcomm.timeout = 0  # 1
 
 PORT_NAME = 'COM7'
 SAFEDST = 600  # mm
+target_markers = []
+platform_markers = []
 
 def motor_mov(i):
     global direction
@@ -19,19 +23,109 @@ def motor_mov(i):
     serialcomm.write(i.encode())
     if i == 'x':
         print("stopped")
-    if i in ["x", "w", "s", "a", "d", "q", "e"]:
+    if i in ["x", "w", "s", "a", "d", "q", "e", "t"]:
         direction = i
     time.sleep(1)  # 2
 
+def get_position():
+    global target_markers,  platform_markers
+
+    server = PC.set_socket_server()
+    while True:
+        markers_list = PC.recv_data(server)
+        
+        if markers_list[0].model_name == "Platform":
+            platform_markers = markers_list
+        else:
+            target_markers = markers_list
+
+def goto_target():
+    global target_markers, platform_markers
+    while len(target_markers) == 0:
+        print("no target ye")
+    target_list = PC.Marker.center(target_markers)
+    target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
+    
+    # if abs(target - PC.Marker.center(platform_markers)) < 0.6:
+    #     motor_mov("x")
+    #     return
+
+    if platform_markers[0].is_front:
+        front = platform_markers[0]
+        back = platform_markers[1]
+    else:
+        front = platform_markers[1]
+        back = platform_markers[0]
+
+    slope = (front.y - back.y) * (front.x - back.x)
+    b = front.y - slope * front.x
+
+    if PC.Marker.colinear([front, back, target]):
+        motor_mov("w")
+        while abs(target_list - PC.Marker.center(platform_markers)) > 0.6:
+            print("going forward")
+        motor_mov("x")
+        return
+
+    if front.x >= back.x:
+        if target[1] > slope * target[0] + b:
+            motor_mov("q")
+            print("going q")
+        else:
+            motor_mov("e")
+            print("going e")
+    elif front.x < back.x:
+        if target[1] > slope * target[0] + b:
+            motor_mov("e")
+            print("going e")
+        else:
+            motor_mov("q")
+            print("going q")
+    
+    while not PC.Marker.colinear([front, back, target]):
+        print("rotationg")
+
+    motor_mov("x")
+    motor_mov("w")
+    while abs(target_list - PC.Marker.center(platform_markers)) > 0.6:
+        print("going forward")
+    motor_mov("x")
+    return
+
+    # while 
+        # if front.x >= back.x and not PC.Marker.colinear([front, back, target]):
+        #     if target[1] > slope * target[0] + b:
+        #         motor_mov("q")
+        #     else:
+        #         motor_mov("e")
+        # elif front.x < back.x and not PC.Marker.colinear([front, back, target]):
+        #     if target[1] > slope * target[0] + b:
+        #         motor_mov("e")
+        #     else:
+        #         motor_mov("q")
+        # else:
+        #     motor_mov("w")        
+
+
 
 def input_movement():
-    global run
+    global run, target_markers, platform_markers
+
     while run:
+        for marker in platform_markers:
+            print(marker)
+
+        if(len(target_markers)):
+            target_center = PC.Marker.center(target_markers)
+            print("TARGER CENTER: ", target_center)
+
+        print("___________________________")
         i = input("Enter Input: ")
         if i == "b":
             run = False
             print('finished')
             break
+
 
         motor_mov(i)
     time.sleep(2)
@@ -89,7 +183,13 @@ if __name__ == '__main__':
 
     t1 = Thread(target=check_surroundings)
     t2 = Thread(target=input_movement)
+    t3 = Thread(target=get_position)
+
+    t4 = Thread(target=goto_target)
 
     t1.start()
     t2.start()
+    t3.start()
+
+    t4.start()
     

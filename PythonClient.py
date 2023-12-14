@@ -25,10 +25,12 @@ class Marker:
         return center_coordinates
     
     def colinear(markers_list):
+        print(markers_list)
         slope1 = (markers_list[0].y - markers_list[1].y) * (markers_list[0].x - markers_list[2].x)
         slope2 = (markers_list[0].y - markers_list[2].y) * (markers_list[0].x - markers_list[1].x)
 
         return abs(slope1 - slope2) < 0.01
+    
 
     def print(self):
         print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front))
