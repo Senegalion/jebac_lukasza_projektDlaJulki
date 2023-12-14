@@ -80,7 +80,6 @@ def main():
     while True:
         print("___________________________")
         markers_list = recv_data(server)
-        #print(recv_data(server))
 
         if markers_list[0].model_name == "Platform":
             platfrom_markers = markers_list
