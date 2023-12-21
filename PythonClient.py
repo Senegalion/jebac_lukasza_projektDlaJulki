@@ -12,6 +12,10 @@ class Marker:
         self.z = z
         self.model_name = model_name
     
+    def distanceSquared(self, marker):
+        return (self.x - marker.x)**2 + (self.z - marker.z)**2
+
+
     def center(markers_list):
         center_coordinates = [0, 0, 0]
         for markers in markers_list:

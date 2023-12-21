@@ -4,7 +4,6 @@ from threading import Thread
 from rplidar import RPLidar
 import math
 import PythonClient as PC
-from queue import Queue
 
 run = True
 direction = "x"
@@ -60,22 +59,22 @@ def goto_target():
     slope = (front.y - back.y) * (front.x - back.x)
     b = front.y - slope * front.x
 
-    if PC.Marker.colinear([front, back, target]):
+    if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
         motor_mov("w")
-        while abs(target_list - PC.Marker.center(platform_markers)) > 0.6:
+        while front.distanceSquared(target) > 0.36:
             print("going forward")
         motor_mov("x")
         return
 
     if front.x >= back.x:
-        if target[1] > slope * target[0] + b:
+        if target.z > slope * target.x + b:
             motor_mov("q")
             print("going q")
         else:
             motor_mov("e")
             print("going e")
-    elif front.x < back.x:
-        if target[1] > slope * target[0] + b:
+    else:
+        if target.z > slope * target.x + b:
             motor_mov("e")
             print("going e")
         else:
@@ -86,8 +85,9 @@ def goto_target():
         print("rotationg")
 
     motor_mov("x")
+    time.sleep(0.2)
     motor_mov("w")
-    while abs(target_list - PC.Marker.center(platform_markers)) > 0.6:
+    while front.distanceSquared(target) > 0.36:
         print("going forward")
     motor_mov("x")
     return
