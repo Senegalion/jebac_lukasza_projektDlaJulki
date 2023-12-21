@@ -127,6 +127,9 @@ def input_movement():
             run = False
             print('finished')
             break
+        if i == "t":
+            goto_target()
+            continue
 
 
         motor_mov(i)
@@ -187,11 +190,7 @@ if __name__ == '__main__':
     t2 = Thread(target=input_movement)
     t3 = Thread(target=get_position)
 
-    t4 = Thread(target=goto_target)
-
     t1.start()
     t2.start()
     t3.start()
-
-    t4.start()
     
