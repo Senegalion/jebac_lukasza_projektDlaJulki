@@ -40,8 +40,9 @@ def get_position():
 
 def goto_target():
     global target_markers, platform_markers
-    while len(target_markers) == 0:
+    if len(target_markers) == 0:
         print("no target ye")
+        return
     target_list = PC.Marker.center(target_markers)
     target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
     
