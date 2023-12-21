@@ -4,6 +4,7 @@ from threading import Thread
 from rplidar import RPLidar
 import math
 import PythonClient as PC
+import copy
 
 run = True
 direction = "x"
@@ -51,11 +52,11 @@ def goto_target():
     #     return
 
     if platform_markers[0].is_front:
-        front = platform_markers[0]
-        back = platform_markers[1]
+        front = copy.copy(platform_markers[0])
+        back = copy.copy(platform_markers[1])
     else:
-        front = platform_markers[1]
-        back = platform_markers[0]
+        front = copy.copy(platform_markers[1])
+        back = copy.copy(platform_markers[0])
 
     slope = (front.y - back.y) * (front.x - back.x)
     b = front.y - slope * front.x
