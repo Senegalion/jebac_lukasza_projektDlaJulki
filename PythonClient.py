@@ -29,9 +29,10 @@ class Marker:
         return center_coordinates
     
     def colinear(markers_list):
-        print(markers_list)
-        slope1 = (markers_list[0].y - markers_list[1].y) * (markers_list[0].x - markers_list[2].x)
-        slope2 = (markers_list[0].y - markers_list[2].y) * (markers_list[0].x - markers_list[1].x)
+        slope1 = (markers_list[0].z - markers_list[1].z) * (markers_list[0].x - markers_list[2].x)
+        slope2 = (markers_list[0].z - markers_list[2].z) * (markers_list[0].x - markers_list[1].x)
+        print(slope1)
+        print(slope2)
 
         return abs(slope1 - slope2) < 0.01
     

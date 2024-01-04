@@ -13,9 +13,20 @@ serialcomm = serial.Serial('COM5', 19200)
 serialcomm.timeout = 0  # 1
 
 PORT_NAME = 'COM7'
-SAFEDST = 600  # mm
+SAFEDST = 400  # mm
 target_markers = []
 platform_markers = []
+
+def front_back():
+    global platform_markers
+
+    if platform_markers[0].is_front:
+        front = copy.copy(platform_markers[0])
+        back = copy.copy(platform_markers[1])
+    else:
+        front = copy.copy(platform_markers[1])
+        back = copy.copy(platform_markers[0])
+    return front, back
 
 def motor_mov(i):
     global direction
@@ -51,46 +62,47 @@ def goto_target():
     #     motor_mov("x")
     #     return
 
-    if platform_markers[0].is_front:
-        front = copy.copy(platform_markers[0])
-        back = copy.copy(platform_markers[1])
-    else:
-        front = copy.copy(platform_markers[1])
-        back = copy.copy(platform_markers[0])
+    front, back = front_back()
 
     slope = (front.y - back.y) * (front.x - back.x)
     b = front.y - slope * front.x
 
     if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
         motor_mov("w")
-        while front.distanceSquared(target) > 0.36:
+        while front.distanceSquared(target) > 0.04:
             print("going forward")
+            front, back = front_back()
         motor_mov("x")
         return
-
+    command = ""
     if front.x >= back.x:
         if target.z > slope * target.x + b:
             motor_mov("q")
-            print("going q")
+            command = "going q"
         else:
             motor_mov("e")
-            print("going e")
+            command = "going e"
     else:
         if target.z > slope * target.x + b:
             motor_mov("e")
-            print("going e")
+            command = "going e"
         else:
             motor_mov("q")
-            print("going q")
+            command = "going q"
     
     while not PC.Marker.colinear([front, back, target]):
-        print("rotationg")
+        front, back = front_back()
+        print(command)
+        time.sleep(0.1)
+        
 
     motor_mov("x")
-    time.sleep(0.2)
+    time.sleep(0.3)
     motor_mov("w")
-    while front.distanceSquared(target) > 0.36:
+    while front.distanceSquared(target) > 0.04:
+        front, back = front_back()
         print("going forward")
+        time.sleep(0.1)
     motor_mov("x")
     return
 
@@ -114,12 +126,6 @@ def input_movement():
     global run, target_markers, platform_markers
 
     while run:
-        for marker in platform_markers:
-            print(marker)
-
-        if(len(target_markers)):
-            target_center = PC.Marker.center(target_markers)
-            print("TARGER CENTER: ", target_center)
 
         print("___________________________")
         i = input("Enter Input: ")
