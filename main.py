@@ -42,20 +42,45 @@ def get_position():
     global target_markers,  platform_markers
 
     server = PC.set_socket_server()
-    while True:
+    while run:
         markers_list = PC.recv_data(server)
         
         if markers_list[0].model_name == "Platform":
             platform_markers = markers_list
         else:
             target_markers = markers_list
+    print("finnished getting position")
+
 
 def go_around(iterator):
     global direction
-    direction = "a"
-
-    
-    goto_target(iterator)
+    saw = False
+    if safe_to_go(iterator, "a"):
+        chosen_direction = "a"
+        opposite_direction = "d"
+    elif safe_to_go(iterator, "d"):
+        chosen_direction = "d"
+        opposite_direction = "a"
+    else:
+        print("HELP")
+        return
+    while safe_to_go(iterator, chosen_direction):
+        motor_mov(chosen_direction)
+        while not safe_to_go(iterator, "w"):
+            time.sleep(0.1)
+            pass
+        motor_mov("x")
+        time.sleep(1)
+        motor_mov("w")
+        while safe_to_go(iterator, "w"):
+            if not safe_to_go(iterator, opposite_direction):
+                saw = True
+            if safe_to_go(iterator, opposite_direction) and saw == True:
+                motor_mov("x")
+                goto_target(iterator)
+                return
+        motor_mov("x")
+        saw = False
 
 def goto_target(iterator):
     global target_markers, platform_markers
@@ -70,7 +95,7 @@ def goto_target(iterator):
 
     if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
         motor_mov("w")
-        while front.distanceSquared(target) > 0.04:
+        while front.distanceSquared(target) > 0.04 and run:
             if not safe_to_go(iterator):
                 go_around(iterator)
                 return
@@ -94,7 +119,7 @@ def goto_target(iterator):
             motor_mov("q")
             command = "going q"
     
-    while not PC.Marker.colinear([front, back, target]):
+    while not PC.Marker.colinear([front, back, target]) and run:
         if not safe_to_go(iterator):
             go_around(iterator)
             return
@@ -106,7 +131,7 @@ def goto_target(iterator):
     motor_mov("x")
     time.sleep(0.3)
     motor_mov("w")
-    while front.distanceSquared(target) > 0.04:
+    while front.distanceSquared(target) > 0.04 and run:
         front, back = front_back()
         print("going forward")
         time.sleep(0.1)
@@ -140,6 +165,8 @@ def input_movement():
     lidar.stop()
     lidar.disconnect()
     serialcomm.close()
+    print('finished input')
+
 
 # angles aligning with table legs return False
 def usefull_angle(angle):
