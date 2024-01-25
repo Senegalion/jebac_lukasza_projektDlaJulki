@@ -50,26 +50,30 @@ def get_position():
         else:
             target_markers = markers_list
 
-def goto_target():
+def go_around(iterator):
+    global direction
+    direction = "a"
+
+    
+    goto_target(iterator)
+
+def goto_target(iterator):
     global target_markers, platform_markers
     if len(target_markers) == 0:
         print("no target ye")
         return
     target_list = PC.Marker.center(target_markers)
     target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
-    
-    # if abs(target - PC.Marker.center(platform_markers)) < 0.6:
-    #     motor_mov("x")
-    #     return
-
     front, back = front_back()
-
     slope = (front.y - back.y) * (front.x - back.x)
     b = front.y - slope * front.x
 
     if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
         motor_mov("w")
         while front.distanceSquared(target) > 0.04:
+            if not safe_to_go(iterator):
+                go_around(iterator)
+                return
             print("going forward")
             front, back = front_back()
         motor_mov("x")
@@ -91,6 +95,9 @@ def goto_target():
             command = "going q"
     
     while not PC.Marker.colinear([front, back, target]):
+        if not safe_to_go(iterator):
+            go_around(iterator)
+            return
         front, back = front_back()
         print(command)
         time.sleep(0.1)
@@ -104,43 +111,34 @@ def goto_target():
         print("going forward")
         time.sleep(0.1)
     motor_mov("x")
-    return
-
-    # while 
-        # if front.x >= back.x and not PC.Marker.colinear([front, back, target]):
-        #     if target[1] > slope * target[0] + b:
-        #         motor_mov("q")
-        #     else:
-        #         motor_mov("e")
-        # elif front.x < back.x and not PC.Marker.colinear([front, back, target]):
-        #     if target[1] > slope * target[0] + b:
-        #         motor_mov("e")
-        #     else:
-        #         motor_mov("q")
-        # else:
-        #     motor_mov("w")        
+     
 
 
 
 def input_movement():
     global run, target_markers, platform_markers
 
+    lidar = RPLidar(PORT_NAME)
+    iterator = lidar.iter_scans()
+    command = ""
     while run:
-
+        if not safe_to_go(iterator):
+            motor_mov("x")
         print("___________________________")
-        i = input("Enter Input: ")
-        if i == "b":
+        command = input("Enter Input: ")
+        if command == "b":
             run = False
             print('finished')
             break
-        if i == "t":
-            goto_target()
+        if command == "t":
+            goto_target(iterator)
             continue
 
-
-        motor_mov(i)
+        motor_mov(command)
     time.sleep(2)
     motor_mov("x")
+    lidar.stop()
+    lidar.disconnect()
     serialcomm.close()
 
 # angles aligning with table legs return False
@@ -152,51 +150,85 @@ def usefull_angle(angle):
         return True
     return False
 
-def check_surroundings():
-    global run, directions
-    lidar = RPLidar(PORT_NAME)
-    iterator = lidar.iter_scans()
-    while(run):
-        scan = next(iterator)    
-        for item in scan:
-            angle = item[1]
-            if not usefull_angle(angle):
-                continue
-            r = item[2]
-            y = -r*math.sin(math.radians(angle))
-            x = r*math.cos(math.radians(angle))
-            # if y >= -170 and y <= 170 and x < 0:
-                # print(r, time.time())
-            if x >= -240 and x <= 240 and y < 0 and direction == "a":
-                if y > -158 - SAFEDST:
-                    print("stop a", y)
-                    motor_mov("x")
-                    break
-            if y >= -170 and y <= 170 and x < 0 and direction == "w":
-                if x > -225 - SAFEDST:
-                    print("stop w", x)
-                    motor_mov("x")
-                    break
-            if x >= -240 and x <= 240 and y > 0 and direction == "d":
-                if y < 158 + SAFEDST:
-                    print("stop d", y)
-                    motor_mov("x")
-                    break
-            if y >= -170 and y <= 170 and x > 0 and direction == "s":
-                if x < 228 + SAFEDST:
-                    print("stop s", x)
-                    motor_mov("x")
-                    break
-    lidar.stop()
-    lidar.disconnect()
+def safe_to_go(iterator, direction_to_go=direction):
+    scan = next(iterator)
+    for item in scan:
+        angle = item[1]
+        if not usefull_angle(angle):
+            continue
+        r = item[2]
+        y = -r*math.sin(math.radians(angle))
+        x = r*math.cos(math.radians(angle))
+        # if y >= -170 and y <= 170 and x < 0:
+            # print(r, time.time())
+        if x >= -240 and x <= 240 and y < 0 and direction_to_go == "a":
+            if y > -158 - SAFEDST:
+                print("stop a", y)
+                
+                return False
+        if y >= -170 and y <= 170 and x < 0 and direction_to_go == "w":
+            if x > -225 - SAFEDST:
+                print("stop w", x)
+                
+                return False
+        if x >= -240 and x <= 240 and y > 0 and direction_to_go == "d":
+            if y < 158 + SAFEDST:
+                print("stop d", y)
+                
+                return False
+        if y >= -170 and y <= 170 and x > 0 and direction_to_go == "s":
+            if x < 228 + SAFEDST:
+                print("stop s", x)
+                
+                return False
+    return True
+
+
+# def check_surroundings():
+#     global run
+#     lidar = RPLidar(PORT_NAME)
+#     iterator = lidar.iter_scans()
+#     while(run):
+#         scan = next(iterator)
+#         for item in scan:
+#             angle = item[1]
+#             if not usefull_angle(angle):
+#                 continue
+#             r = item[2]
+#             y = -r*math.sin(math.radians(angle))
+#             x = r*math.cos(math.radians(angle))
+#             # if y >= -170 and y <= 170 and x < 0:
+#                 # print(r, time.time())
+#             if x >= -240 and x <= 240 and y < 0 and direction == "a":
+#                 if y > -158 - SAFEDST:
+#                     print("stop a", y)
+#                     motor_mov("x")
+#                     break
+#             if y >= -170 and y <= 170 and x < 0 and direction == "w":
+#                 if x > -225 - SAFEDST:
+#                     print("stop w", x)
+#                     motor_mov("x")
+#                     break
+#             if x >= -240 and x <= 240 and y > 0 and direction == "d":
+#                 if y < 158 + SAFEDST:
+#                     print("stop d", y)
+#                     motor_mov("x")
+#                     break
+#             if y >= -170 and y <= 170 and x > 0 and direction == "s":
+#                 if x < 228 + SAFEDST:
+#                     print("stop s", x)
+#                     motor_mov("x")
+#                     break
+#     lidar.stop()
+#     lidar.disconnect()
 
 if __name__ == '__main__':
 
-    t1 = Thread(target=check_surroundings)
+    # t1 = Thread(target=check_surroundings)
     t2 = Thread(target=input_movement)
     t3 = Thread(target=get_position)
 
-    t1.start()
+    # t1.start()
     t2.start()
     t3.start()
     
