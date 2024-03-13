@@ -5,6 +5,7 @@ import re
 class Marker:
     def __init__(self, id, x, y, z, model_name):
         self.id = id
+        self.is_front = False
         self.x = x
         self.y = y
         self.z = z
