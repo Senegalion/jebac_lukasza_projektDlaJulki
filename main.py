@@ -96,6 +96,8 @@ def goto_target(iterator):
     if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
         motor_mov("w")
         while front.distanceSquared(target) > 0.04 and run:
+            print("safe to go #1")
+            print(safe_to_go(iterator))
             if not safe_to_go(iterator):
                 go_around(iterator)
                 return
@@ -120,6 +122,8 @@ def goto_target(iterator):
             command = "going q"
     
     while not PC.Marker.colinear([front, back, target]) and run:
+        print("safe to go #2")
+        print(safe_to_go(iterator))
         if not safe_to_go(iterator):
             go_around(iterator)
             return
@@ -181,6 +185,7 @@ def safe_to_go(iterator, direction_to_go=direction):
     scan = next(iterator)
     for item in scan:
         angle = item[1]
+        # print(angle)
         if not usefull_angle(angle):
             continue
         r = item[2]

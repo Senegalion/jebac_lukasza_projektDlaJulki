@@ -19,7 +19,8 @@ class LidarThread(threading.Thread):
 
         self.running = True
         self.PORT_NAME = 'COM7'
-    
+        self.lidar = RPLidar(self.PORT_NAME)
+        
     # angles aligning with table legs return False.
     # all done experimentally!!! If table configuration changes, the function should too.
     def usefull_angle(self, angle):
@@ -33,8 +34,7 @@ class LidarThread(threading.Thread):
 
     def run(self):
         SAFEDST = 400
-        lidar = RPLidar(self.PORT_NAME)
-        iterator = lidar.iter_scans()
+        iterator = self.lidar.iter_scans()
         while self.running:
             scan = next(iterator)
             for item in scan:
@@ -53,13 +53,13 @@ class LidarThread(threading.Thread):
                     self.safe_s = (x > 228 + SAFEDST)
                 if x >= -240 and x <= 240 and y < 0:
                     self.safe_a = (y < -158 - SAFEDST)
-
+        self.lidar.stop()
+        self.lidar.disconnect()
     
     
     def stop(self):
+        print("lidar_stop")
         self.running = False
-        self.lidar.stop()
-        self.lidar.disconnect()
 
 class InputThread(threading.Thread):
     def __init__(self):
@@ -70,11 +70,12 @@ class InputThread(threading.Thread):
     def run(self):
         while self.running:
             inp = input("Enter input> ")
-            if inp in ["x", "w", "s", "a", "d", "q", "e", "t"]:
+            if inp in ["x", "w", "s", "a", "d", "q", "e", "t","b"]:
                 self.command = inp
             else:
                 print("Unknown command")
     def stop(self):
+        print("input_stop")
         self.running = False
 
 class OptTrackThread(threading.Thread):
@@ -97,6 +98,7 @@ class OptTrackThread(threading.Thread):
 
 
     def stop(self):
+        print("optitrack_stop")
         self.running = False
 
 class MainThread(threading.Thread):
@@ -137,6 +139,7 @@ class MainThread(threading.Thread):
         self.optitrack_thread.stop()
         self.input_thread.stop()
         self.serialcomm.close()
+        print("main_stop")
         
 
     def check_safety(self, direction):
@@ -160,7 +163,7 @@ class MainThread(threading.Thread):
             back = copy.copy(self.optitrack_thread.platform_markers[0])
         return front, back
 
-    def motor_mov(i, self):
+    def motor_mov(self, i):
         i.strip()
         self.serialcomm.write(i.encode())
         if i == 'x':
