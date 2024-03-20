@@ -170,89 +170,88 @@ class MainThread(threading.Thread):
             print("stopped")
         time.sleep(1)  # 2?
 
-
-def go_around(self):
-    saw = False
-    if self.check_safety("a"):
-        chosen_direction = "a"
-        opposite_direction = "d"
-    elif self.check_safety("d"):
-        chosen_direction = "d"
-        opposite_direction = "a"
-    else:
-        print("HELP")
-        return
-    while self.check_safety(chosen_direction):
-        self.motor_mov(chosen_direction)
-        while not self.check_safety("w"):
-            time.sleep(0.1)
-            pass
-        self.motor_mov("x")
-        time.sleep(1)
-        self.motor_mov("w")
-        while self.check_safety("w"):
-            if not self.check_safety(opposite_direction):
-                saw = True
-            if self.check_safety(opposite_direction) and saw == True:
-                self.motor_mov("x")
-                goto_target()
-                return
-        self.motor_mov("x")
+    def go_around(self):
         saw = False
+        if self.check_safety("a"):
+            chosen_direction = "a"
+            opposite_direction = "d"
+        elif self.check_safety("d"):
+            chosen_direction = "d"
+            opposite_direction = "a"
+        else:
+            print("HELP")
+            return
+        while self.check_safety(chosen_direction):
+            self.motor_mov(chosen_direction)
+            while not self.check_safety("w"):
+                time.sleep(0.1)
+                pass
+            self.motor_mov("x")
+            time.sleep(1)
+            self.motor_mov("w")
+            while self.check_safety("w"):
+                if not self.check_safety(opposite_direction):
+                    saw = True
+                if self.check_safety(opposite_direction) and saw == True:
+                    self.motor_mov("x")
+                    goto_target()
+                    return
+            self.motor_mov("x")
+            saw = False
 
-def goto_target(self):
-    if len(self.optitrack_thread.target_markers) == 0:
-        print("no target ye")
-        return
-    target_list = PC.Marker.center(self.optitrack_thread.target_markers)
-    target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
-    front, back = self.front_back()
-    slope = (front.y - back.y) * (front.x - back.x)
-    b = front.y - slope * front.x
+    def goto_target(self):
+        if len(self.optitrack_thread.target_markers) == 0:
+            print("no target ye")
+            return
+        target_list = PC.Marker.center(self.optitrack_thread.target_markers)
+        target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
+        front, back = self.front_back()
+        slope = (front.y - back.y) * (front.x - back.x)
+        b = front.y - slope * front.x
 
-    if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
-        self.motor_mov("w")
-        while front.distanceSquared(target) > 0.04 and self.input_thread.command == "t":
+        if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
+            self.motor_mov("w")
+            while front.distanceSquared(target) > 0.04 and self.input_thread.command == "t":
+                if not self.check_safety():
+                    go_around()
+                    return
+                print("going forward")
+                front, back = self.front_back()
+            self.motor_mov("x")
+            return
+        command = ""
+        if front.x >= back.x:
+            if target.z > slope * target.x + b:
+                self.motor_mov("q")
+                command = "going q"
+            else:
+                self.motor_mov("e")
+                command = "going e"
+        else:
+            if target.z > slope * target.x + b:
+                self.motor_mov("e")
+                command = "going e"
+            else:
+                self.motor_mov("q")
+                command = "going q"
+        
+        while not PC.Marker.colinear([front, back, target]):
             if not self.check_safety():
                 go_around()
                 return
-            print("going forward")
             front, back = self.front_back()
-        self.motor_mov("x")
-        return
-    command = ""
-    if front.x >= back.x:
-        if target.z > slope * target.x + b:
-            self.motor_mov("q")
-            command = "going q"
-        else:
-            self.motor_mov("e")
-            command = "going e"
-    else:
-        if target.z > slope * target.x + b:
-            self.motor_mov("e")
-            command = "going e"
-        else:
-            self.motor_mov("q")
-            command = "going q"
-    
-    while not PC.Marker.colinear([front, back, target]):
-        if not self.check_safety():
-            go_around()
-            return
-        front, back = self.front_back()
-        print(command)
-        time.sleep(0.1)
-        
+            print(command)
+            time.sleep(0.1)
+            
 
-    self.motor_mov("x")
-    time.sleep(0.3)
-    self.motor_mov("w")
-    while front.distanceSquared(target) > 0.04:
-        front, back = self.front_back()
-        print("going forward")
-        time.sleep(0.1)
-    self.motor_mov("x")
+        self.motor_mov("x")
+        time.sleep(0.3)
+        self.motor_mov("w")
+        while front.distanceSquared(target) > 0.04:
+            front, back = self.front_back()
+            print("going forward")
+            time.sleep(0.1)
+        self.motor_mov("x")
      
 
 
