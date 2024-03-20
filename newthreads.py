@@ -6,6 +6,9 @@ from rplidar import RPLidar
 import math
 import PythonClient as PC
 import copy
+import logging
+
+logging.getLogger("rplidar").setLevel(logging.ERROR)
 
 
 
@@ -34,7 +37,7 @@ class LidarThread(threading.Thread):
 
     def run(self):
         SAFEDST = 400
-        iterator = self.lidar.iter_scans()
+        iterator = self.lidar.iter_scans(max_buf_meas=800)
         while self.running:
             scan = next(iterator)
             for item in scan:
@@ -55,10 +58,11 @@ class LidarThread(threading.Thread):
                     self.safe_a = (y < -158 - SAFEDST)
         self.lidar.stop()
         self.lidar.disconnect()
+        print("lidar_stop")
+
     
     
     def stop(self):
-        print("lidar_stop")
         self.running = False
 
 class InputThread(threading.Thread):
@@ -74,8 +78,9 @@ class InputThread(threading.Thread):
                 self.command = inp
             else:
                 print("Unknown command")
-    def stop(self):
         print("input_stop")
+
+    def stop(self):
         self.running = False
 
 class OptTrackThread(threading.Thread):
@@ -95,10 +100,11 @@ class OptTrackThread(threading.Thread):
             # elif (markers_list[0].model_name == "Target"):
             else:
                 self.target_markers = markers_list
+        print("optitrack_stop")
+
 
 
     def stop(self):
-        print("optitrack_stop")
         self.running = False
 
 class MainThread(threading.Thread):
@@ -194,7 +200,7 @@ class MainThread(threading.Thread):
                     saw = True
                 if self.check_safety(opposite_direction) and saw == True:
                     self.motor_mov("x")
-                    goto_target()
+                    self.goto_target()
                     return
             self.motor_mov("x")
             saw = False
@@ -212,8 +218,8 @@ class MainThread(threading.Thread):
         if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
             self.motor_mov("w")
             while front.distanceSquared(target) > 0.04 and self.input_thread.command == "t":
-                if not self.check_safety():
-                    go_around()
+                if not self.check_safety("w"):
+                    self.go_around()
                     return
                 print("going forward")
                 front, back = self.front_back()
@@ -236,8 +242,8 @@ class MainThread(threading.Thread):
                 command = "going q"
         
         while not PC.Marker.colinear([front, back, target]):
-            if not self.check_safety():
-                go_around()
+            if not self.check_safety("w"):
+                self.go_around()
                 return
             front, back = self.front_back()
             print(command)
