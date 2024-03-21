@@ -118,6 +118,7 @@ class MainThread(threading.Thread):
 
     def run(self):
         direction = "x"
+        targeted = False
         self.serialcomm.timeout = 0  # 1?
         while True:
             command = self.input_thread.command
@@ -131,9 +132,11 @@ class MainThread(threading.Thread):
             if command == "b":
                 print('finished')
                 break
-            if command == "t":
+            if command == "t" and targeted == False:
                 self.goto_target()
+                targeted = True
                 direction = "x"
+                command = "x"
                 continue
             if command in ["w", "s", "a", "d", "e", "q"] and direction == "x" and self.check_safety(command):
                 direction = command            
@@ -173,7 +176,7 @@ class MainThread(threading.Thread):
         i.strip()
         self.serialcomm.write(i.encode())
         if i == 'x':
-            print("stopped")
+            print("command x")
         time.sleep(1)  # 2?
 
     def go_around(self):
@@ -204,6 +207,7 @@ class MainThread(threading.Thread):
                     return
             self.motor_mov("x")
             saw = False
+        print("finished go_around")
 
     def goto_target(self):
         if len(self.optitrack_thread.target_markers) == 0:
@@ -221,7 +225,7 @@ class MainThread(threading.Thread):
                 if not self.check_safety("w"):
                     self.go_around()
                     return
-                print("going forward")
+                print("colinear at start: going forward")
                 front, back = self.front_back()
             self.motor_mov("x")
             return
@@ -240,13 +244,15 @@ class MainThread(threading.Thread):
             else:
                 self.motor_mov("q")
                 command = "going q"
-        
+        tmp = 0
         while not PC.Marker.colinear([front, back, target]):
             if not self.check_safety("w"):
                 self.go_around()
                 return
             front, back = self.front_back()
-            print(command)
+            if tmp == 0:
+                print(command)
+                tmp = 1
             time.sleep(0.1)
             
 
@@ -255,9 +261,11 @@ class MainThread(threading.Thread):
         self.motor_mov("w")
         while front.distanceSquared(target) > 0.04:
             front, back = self.front_back()
-            print("going forward")
+            print("going forward until dst < 0.2")
             time.sleep(0.1)
         self.motor_mov("x")
+        print("finished goto_target")
+
      
 
 
