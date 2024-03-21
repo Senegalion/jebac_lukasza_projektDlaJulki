@@ -118,25 +118,25 @@ class MainThread(threading.Thread):
 
     def run(self):
         direction = "x"
-        targeted = False
         self.serialcomm.timeout = 0  # 1?
         while True:
             command = self.input_thread.command
             if self.check_safety(direction) == False:
                 direction = "x"
+                self.input_thread.command = "x"
                 self.motor_mov(direction)
 
             if command == "x" and direction != "x":
                 direction = "x"
+                self.input_thread.command = "x"
                 self.motor_mov("x")
             if command == "b":
                 print('finished')
                 break
-            if command == "t" and targeted == False:
+            if command == "t":
                 self.goto_target()
-                targeted = True
                 direction = "x"
-                command = "x"
+                self.input_thread.command = "x"
                 continue
             if command in ["w", "s", "a", "d", "e", "q"] and direction == "x" and self.check_safety(command):
                 direction = command            
