@@ -153,6 +153,8 @@ class MainThread(threading.Thread):
 
     def check_safety(self, direction):
         if direction == "w":
+            print("I'm checking corectly result : ", end = "")
+            print(self.lidar_thread.safe_w)
             return self.lidar_thread.safe_w
         if direction == "s":
             return self.lidar_thread.safe_s
@@ -180,6 +182,7 @@ class MainThread(threading.Thread):
         time.sleep(1)  # 2?
 
     def go_around(self):
+        print("is in go_around")
         saw = False
         if self.check_safety("a"):
             chosen_direction = "a"
@@ -246,6 +249,7 @@ class MainThread(threading.Thread):
                 command = "going q"
         tmp = 0
         while not PC.Marker.colinear([front, back, target]):
+            print(self.check_safety("w"))
             if not self.check_safety("w"):
                 self.go_around()
                 return

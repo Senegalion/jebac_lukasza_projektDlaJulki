@@ -182,6 +182,7 @@ def usefull_angle(angle):
     return False
 
 def safe_to_go(iterator, direction_to_go=direction):
+    
     scan = next(iterator)
     for item in scan:
         angle = item[1]
