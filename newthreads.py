@@ -8,7 +8,7 @@ import PythonClient as PC
 import copy
 import logging
 
-logging.getLogger("rplidar").setLevel(logging.ERROR)
+# logging.getLogger("rplidar").setLevel(logging.ERROR)
 
 
 
@@ -37,7 +37,7 @@ class LidarThread(threading.Thread):
 
     def run(self):
         SAFEDST = 400
-        iterator = self.lidar.iter_scans(max_buf_meas=800)
+        iterator = self.lidar.iter_scans()
         while self.running:
             scan = next(iterator)
             for item in scan:
@@ -56,11 +56,23 @@ class LidarThread(threading.Thread):
                     self.safe_s = (x > 228 + SAFEDST)
                 if x >= -240 and x <= 240 and y < 0:
                     self.safe_a = (y < -158 - SAFEDST)
+                
         self.lidar.stop()
         self.lidar.disconnect()
         print("lidar_stop")
 
-    
+    def check_safety(self, direction):
+        if direction == "w":
+            print("I'm checking corectly result : ", end = "")
+            print(self.safe_w)
+            return self.safe_w
+        if direction == "s":
+            return self.safe_s
+        if direction == "a":
+            return self.safe_a
+        if direction == "d":
+            return self.safe_d
+        return True
     
     def stop(self):
         self.running = False
@@ -121,7 +133,7 @@ class MainThread(threading.Thread):
         self.serialcomm.timeout = 0  # 1?
         while True:
             command = self.input_thread.command
-            if self.check_safety(direction) == False:
+            if self.lidar_thread.check_safety(direction = direction) == False:
                 direction = "x"
                 self.input_thread.command = "x"
                 self.motor_mov(direction)
@@ -151,20 +163,6 @@ class MainThread(threading.Thread):
         print("main_stop")
         
 
-    def check_safety(self, direction):
-        if direction == "w":
-            print("I'm checking corectly result : ", end = "")
-            print(self.lidar_thread.safe_w)
-            return self.lidar_thread.safe_w
-        if direction == "s":
-            return self.lidar_thread.safe_s
-        if direction == "a":
-            return self.lidar_thread.safe_a
-        if direction == "d":
-            return self.lidar_thread.safe_d
-        return True
-        
-
     def front_back(self):
         if self.optitrack_thread.platform_markers[0].is_front:
             front = copy.copy(self.optitrack_thread.platform_markers[0])
@@ -184,27 +182,27 @@ class MainThread(threading.Thread):
     def go_around(self):
         print("is in go_around")
         saw = False
-        if self.check_safety("a"):
+        if self.lidar_thread.check_safety("a"):
             chosen_direction = "a"
             opposite_direction = "d"
-        elif self.check_safety("d"):
+        elif self.lidar_thread.check_safety("d"):
             chosen_direction = "d"
             opposite_direction = "a"
         else:
             print("HELP")
             return
-        while self.check_safety(chosen_direction):
+        while self.lidar_thread.check_safety(chosen_direction):
             self.motor_mov(chosen_direction)
-            while not self.check_safety("w"):
+            while not self.lidar_thread.check_safety("w"):
                 time.sleep(0.1)
                 pass
             self.motor_mov("x")
             time.sleep(1)
             self.motor_mov("w")
-            while self.check_safety("w"):
-                if not self.check_safety(opposite_direction):
+            while self.lidar_thread.check_safety("w"):
+                if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
-                if self.check_safety(opposite_direction) and saw == True:
+                if self.lidar_thread.check_safety(opposite_direction) and saw == True:
                     self.motor_mov("x")
                     self.goto_target()
                     return
@@ -225,7 +223,7 @@ class MainThread(threading.Thread):
         if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
             self.motor_mov("w")
             while front.distanceSquared(target) > 0.04 and self.input_thread.command == "t":
-                if not self.check_safety("w"):
+                if not self.lidar_thread.check_safety("w"):
                     self.go_around()
                     return
                 print("colinear at start: going forward")
@@ -249,8 +247,8 @@ class MainThread(threading.Thread):
                 command = "going q"
         tmp = 0
         while not PC.Marker.colinear([front, back, target]):
-            print(self.check_safety("w"))
-            if not self.check_safety("w"):
+            print(self.lidar_thread.check_safety("w"))
+            if not self.lidar_thread.check_safety("w"):
                 self.go_around()
                 return
             front, back = self.front_back()
@@ -265,6 +263,9 @@ class MainThread(threading.Thread):
         self.motor_mov("w")
         while front.distanceSquared(target) > 0.04:
             front, back = self.front_back()
+            if not self.lidar_thread.check_safety("w"):
+                self.go_around()
+                return
             print("going forward until dst < 0.2")
             time.sleep(0.1)
         self.motor_mov("x")
