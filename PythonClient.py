@@ -2,6 +2,8 @@ import socket
 import time
 import re
 import string
+import numpy as np
+import math
 
 class Marker:
     def __init__(self, id, x, y, z, model_name, is_front):
@@ -35,7 +37,18 @@ class Marker:
         print(slope2)
 
         return abs(slope1 - slope2) < 0.01
-    
+    def target_to_left(vector_from, vector_to) -> bool:
+        vector_from = np.atleast_1d(vector_from)
+        vector_to = np.atleast_1d(vector_to)
+        return np.cross(vector_from[:2], vector_to[:2]) > 0
+
+    def angle(vector_from, vector_to) -> float:
+        vector_from = np.atleast_1d(vector_from)
+        vector_to = np.atleast_1d(vector_to)
+        dot = np.dot(vector_from[:2], vector_to[:2])
+        dst1 = np.linalg.norm(vector_from[:2])
+        dst2 = np.linalg.norm(vector_to[:2])
+        return math.acos(dot / (dst1 * dst2)) *360/(2*math.pi)
 
     def print(self):
         print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front))
