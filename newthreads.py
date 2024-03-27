@@ -211,41 +211,6 @@ class MainThread(threading.Thread):
             saw = False
         print("finished go_around")
 
-    def goto_target_vector(self):
-        if len(self.optitrack_thread.target_markers) == 0:
-            print("no target ye")
-            return
-        target_list = PC.Marker.center(self.optitrack_thread.target_markers)
-        target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
-        
-        front, back = self.front_back()
-        
-        t_vector = np.array([target.x - front.x, target.y - front.y])
-        p_vector = np.array([front.x - back.x, front.y - back.y])
-
-        go_left = PC.Marker.target_to_left(p_vector, t_vector)
-        ANGLE = 10  # degrees
-        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
-            if go_left:
-                self.motor_mov("q")
-                print("go q")
-            else:
-                self.motor_mov("e")
-                print("go e")
-        print("angle corrected")
-
-        tmp = False
-        while PC.Marker.distanceSquared > 0.04 and self.input_thread.command != "b":
-            if not self.check_safety("w"):
-                self.motor_mov("x")
-                time.sleep(1)
-                self.go_around()
-                return
-            if not tmp:
-                self.motor_mov("w")
-                print("going forward")
-        self.motor_mov("x")
-        print("finished goto_target")
 
     def goto_target(self):
         if len(self.optitrack_thread.target_markers) == 0:
@@ -308,7 +273,78 @@ class MainThread(threading.Thread):
         self.motor_mov("x")
         print("finished goto_target")
 
-     
+    def goto_target_vector(self):
+        if len(self.optitrack_thread.target_markers) == 0:
+            print("no target ye")
+            return
+        target_list = PC.Marker.center(self.optitrack_thread.target_markers)
+        target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
+        
+        front, back = self.front_back()
+        
+        t_vector = np.array([target.x - front.x, target.y - front.y])
+        p_vector = np.array([front.x - back.x, front.y - back.y])
+
+        go_left = PC.Marker.target_to_left(p_vector, t_vector)
+        ANGLE = 10  # degrees
+        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
+            if go_left:
+                self.motor_mov("q")
+                print("go q")
+            else:
+                self.motor_mov("e")
+                print("go e")
+        print("angle corrected")
+
+        tmp = False
+        while PC.Marker.distanceSquared > 0.04 and self.input_thread.command != "b":
+            if not self.check_safety("w"):
+                self.motor_mov("x")
+                time.sleep(1)
+                self.go_around()
+                return
+            if not tmp:
+                self.motor_mov("w")
+                print("going forward")
+        self.motor_mov("x")
+        print("finished goto_target")
+
+    def goto_target_vector_2(self):
+        if len(self.optitrack_thread.target_markers) == 0:
+            print("no target ye")
+            return
+        target_list = PC.Marker.center(self.optitrack_thread.target_markers)
+        target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
+        
+        front, back = self.front_back()
+        
+        t_vector = np.array([target.x - front.x, target.y - front.y])
+        p_vector = np.array([front.x - back.x, front.y - back.y])
+
+        go_left = PC.Marker.target_to_left(p_vector, t_vector)
+        ANGLE = 10  # degrees
+        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
+            if go_left:
+                self.motor_mov("q")
+                print("go q")
+            else:
+                self.motor_mov("e")
+                print("go e")
+        print("angle corrected")
+
+        tmp = False
+        while PC.Marker.distanceSquared > 0.04 and self.input_thread.command != "b":
+            if not self.check_safety("w"):
+                self.motor_mov("x")
+                time.sleep(1)
+                self.go_around()
+                return
+            if not tmp:
+                self.motor_mov("w")
+                print("going forward")
+        self.motor_mov("x")
+        print("finished goto_target")
+
 
 
 def main():
