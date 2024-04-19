@@ -201,6 +201,7 @@ class MainThread(threading.Thread):
             time.sleep(1)
             self.motor_mov("w")
             while self.lidar_thread.check_safety("w"):
+
                 if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
                 if self.lidar_thread.check_safety(opposite_direction) and saw == True:
@@ -290,7 +291,7 @@ class MainThread(threading.Thread):
         while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
             if go_left:
                 self.motor_mov("q")
-                print("go q")
+                print(f"go q")
             else:
                 self.motor_mov("e")
                 print("go e")
