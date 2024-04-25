@@ -9,17 +9,29 @@ import copy
 import logging
 import numpy as np
 
-# logging.getLogger("rplidar").setLevel(logging.ERROR)
+logging.getLogger("rplidar").setLevel(logging.ERROR)
 
 
 
 class LidarThread(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.safe_w = True
-        self.safe_s = True
-        self.safe_a = True
-        self.safe_d = True
+
+        self.safe_areas_ins = {
+            "w" : True,
+            "a" : True,
+            "s" : True,
+            "d" : True
+        }
+
+        self.safe_areas_out = {
+            "w" : True,
+            "a" : True,
+            "s" : True,
+            "d" : True
+        }
+
+        self.last_region = "w"
 
         self.running = True
         self.PORT_NAME = 'COM7'
@@ -34,11 +46,46 @@ class LidarThread(threading.Thread):
                     angle >= 336 or angle <= 26:
             return True
         return False
+    
+    def set_safety_flags(self, x, y):
+        SAFEDST = 400
 
+        if y >= -170 and y <= 170 and x < 0:
+            if self.last_region != "w":
+                self.safe_areas_out["d"] = self.safe_areas_ins["d"]
+                self.safe_areas_ins["d"] = True
+                self.last_region = "w"
+            if not (x < -225 - SAFEDST):
+                self.safe_areas_ins["w"] = False
+
+        if x >= -240 and x <= 240 and y > 0:
+            if self.last_region != "d":
+                self.safe_areas_out["s"] = self.safe_areas_ins["s"]
+                self.safe_areas_ins["s"] = True
+                self.last_region = "d"
+            if not (y > 158 + SAFEDST):
+                self.safe_areas_ins["d"] = False
+
+        if y >= -170 and y <= 170 and x > 0:
+            if self.last_region != "s":
+                self.safe_areas_out["a"] = self.safe_areas_ins["a"]
+                self.safe_areas_ins["a"] = True
+                self.last_region = "s"
+            if not (x > 228 + SAFEDST):
+                self.safe_areas_ins["s"] = False
+
+        if x >= -240 and x <= 240 and y < 0:
+            if self.last_region != "a":
+                self.safe_areas_out["w"] = self.safe_areas_ins["w"]
+                self.safe_areas_ins["w"] = True
+                self.last_region = "a"
+            if not (y < -158 - SAFEDST):
+                self.safe_areas_ins["a"] = False
 
     def run(self):
         SAFEDST = 400
         iterator = self.lidar.iter_scans()
+
         while self.running:
             scan = next(iterator)
             for item in scan:
@@ -49,30 +96,25 @@ class LidarThread(threading.Thread):
                 y = -r*math.sin(math.radians(angle))
                 x = r*math.cos(math.radians(angle))
                 
-                if y >= -170 and y <= 170 and x < 0:
-                    self.safe_w = (x < -225 - SAFEDST)
-                if x >= -240 and x <= 240 and y > 0:
-                    self.safe_d =  (y < 158 + SAFEDST)
-                if y >= -170 and y <= 170 and x > 0:
-                    self.safe_s = (x > 228 + SAFEDST)
-                if x >= -240 and x <= 240 and y < 0:
-                    self.safe_a = (y < -158 - SAFEDST)
+                self.set_safety_flags(x, y)
+
+                # if y >= -170 and y <= 170 and x < 0:
+                #     self.safe_w = (x < -225 - SAFEDST)
+                # if x >= -240 and x <= 240 and y > 0:
+                #     self.safe_d =  (y > 158 + SAFEDST)
+                # if y >= -170 and y <= 170 and x > 0:
+                #     self.safe_s = (x > 228 + SAFEDST)
+                # if x >= -240 and x <= 240 and y < 0:
+                #     self.safe_a = (y < -158 - SAFEDST)
+                # print(self.safe_w, self.safe_d, self.safe_s, self.safe_a)
                 
         self.lidar.stop()
         self.lidar.disconnect()
         print("lidar_stop")
 
     def check_safety(self, direction):
-        if direction == "w":
-            print("I'm checking corectly result : ", end = "")
-            print(self.safe_w)
-            return self.safe_w
-        if direction == "s":
-            return self.safe_s
-        if direction == "a":
-            return self.safe_a
-        if direction == "d":
-            return self.safe_d
+        if direction in ["w", "s", "a", "d"]:
+            return self.safe_areas_out[direction]
         return True
     
     def stop(self):
@@ -192,20 +234,25 @@ class MainThread(threading.Thread):
         else:
             print("HELP")
             return
+        print(chosen_direction)
         while self.lidar_thread.check_safety(chosen_direction):
             self.motor_mov(chosen_direction)
             while not self.lidar_thread.check_safety("w"):
                 time.sleep(0.1)
                 pass
             self.motor_mov("x")
+            print("x")
             time.sleep(1)
             self.motor_mov("w")
+            print("w")
             while self.lidar_thread.check_safety("w"):
-
+                print(saw)
                 if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
                 if self.lidar_thread.check_safety(opposite_direction) and saw == True:
                     self.motor_mov("x")
+                    print("x")
+                    print("goto_target")
                     self.goto_target()
                     return
             self.motor_mov("x")
@@ -264,12 +311,12 @@ class MainThread(threading.Thread):
         self.motor_mov("x")
         time.sleep(0.3)
         self.motor_mov("w")
+        print("w")
         while front.distanceSquared(target) > 0.04:
             front, back = self.front_back()
             if not self.lidar_thread.check_safety("w"):
                 self.go_around()
                 return
-            print("going forward until dst < 0.2")
             time.sleep(0.1)
         self.motor_mov("x")
         print("finished goto_target")
@@ -310,41 +357,6 @@ class MainThread(threading.Thread):
         self.motor_mov("x")
         print("finished goto_target")
 
-    def goto_target_vector_2(self):
-        if len(self.optitrack_thread.target_markers) == 0:
-            print("no target ye")
-            return
-        target_list = PC.Marker.center(self.optitrack_thread.target_markers)
-        target = PC.Marker(0, target_list[0], target_list[1], target_list[2], "Target", False)
-        
-        front, back = self.front_back()
-        
-        t_vector = np.array([target.x - front.x, target.y - front.y])
-        p_vector = np.array([front.x - back.x, front.y - back.y])
-
-        go_left = PC.Marker.target_to_left(p_vector, t_vector)
-        ANGLE = 10  # degrees
-        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
-            if go_left:
-                self.motor_mov("q")
-                print("go q")
-            else:
-                self.motor_mov("e")
-                print("go e")
-        print("angle corrected")
-
-        tmp = False
-        while PC.Marker.distanceSquared > 0.04 and self.input_thread.command != "b":
-            if not self.check_safety("w"):
-                self.motor_mov("x")
-                time.sleep(1)
-                self.go_around()
-                return
-            if not tmp:
-                self.motor_mov("w")
-                print("going forward")
-        self.motor_mov("x")
-        print("finished goto_target")
 
 
 
