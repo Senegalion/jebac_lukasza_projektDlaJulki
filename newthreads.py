@@ -149,7 +149,8 @@ class OptTrackThread(threading.Thread):
         server = PC.set_socket_server()
         while self.running:
             markers_list = PC.recv_data(server)
-            
+            if markers_list is None:
+                continue
             if markers_list[0].model_name == "Platform":
                 self.platform_markers = markers_list
             # elif (markers_list[0].model_name == "Target"):
@@ -246,19 +247,18 @@ class MainThread(threading.Thread):
             self.motor_mov("w")
             print("w")
             while self.lidar_thread.check_safety("w"):
-                print(saw)
+                
                 if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
+                    print(f"saw + {saw}")
                 if self.lidar_thread.check_safety(opposite_direction) and saw == True:
                     self.motor_mov("x")
                     print("x")
-                    print("goto_target")
+                    print("goto_target again")
                     self.goto_target()
                     return
             self.motor_mov("x")
             saw = False
-        print("finished go_around")
-
 
     def goto_target(self):
         if len(self.optitrack_thread.target_markers) == 0:
@@ -295,16 +295,13 @@ class MainThread(threading.Thread):
             else:
                 self.motor_mov("q")
                 command = "going q"
-        tmp = 0
+        
+        print(command)
         while not PC.Marker.colinear([front, back, target]):
-            print(self.lidar_thread.check_safety("w"))
             if not self.lidar_thread.check_safety("w"):
                 self.go_around()
                 return
             front, back = self.front_back()
-            if tmp == 0:
-                print(command)
-                tmp = 1
             time.sleep(0.1)
             
 

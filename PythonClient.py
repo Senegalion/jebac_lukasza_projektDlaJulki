@@ -87,10 +87,13 @@ def set_socket_server():
 
 def recv_data(socket_server):
     header = socket_server.recv(10).decode()
-    message_length = int(header)
-    data = socket_server.recv(message_length).decode()
-    #return data
-    markers_list = parse_marker_string(data)
+    try:
+        message_length = int(header)
+        data = socket_server.recv(message_length).decode()
+        #return data
+        markers_list = parse_marker_string(data)
+    except:
+        return None
     return markers_list
 
 def main():    
