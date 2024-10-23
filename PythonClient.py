@@ -1,21 +1,64 @@
 import socket
 import time
 import re
+import string
+import numpy as np
+import math
 
 class Marker:
-    def __init__(self, id, x, y, z, model_name):
+    def __init__(self, id, x, y, z, model_name, is_front):
         self.id = id
+<<<<<<< HEAD
         self.is_front = False
+=======
+        self.is_front = is_front
+>>>>>>> 579b86bb895a10635425fb0e52e6dce0e22109e2
         self.x = x
         self.y = y
         self.z = z
         self.model_name = model_name
     
+    def distanceSquared(self, marker):
+        return (self.x - marker.x)**2 + (self.z - marker.z)**2
+
+
+    def center(markers_list):
+        center_coordinates = [0, 0, 0]
+        for markers in markers_list:
+            center_coordinates[0] = center_coordinates[0] + markers.x
+            center_coordinates[1] = center_coordinates[1] + markers.y
+            center_coordinates[2] = center_coordinates[2] + markers.z
+
+        for i in range(len(center_coordinates)):
+            center_coordinates[i] = center_coordinates[i] / len(markers_list)
+
+        return center_coordinates
+    
+    def colinear(markers_list):
+        slope1 = (markers_list[0].z - markers_list[1].z) * (markers_list[0].x - markers_list[2].x)
+        slope2 = (markers_list[0].z - markers_list[2].z) * (markers_list[0].x - markers_list[1].x)
+        print(slope1)
+        print(slope2)
+
+        return abs(slope1 - slope2) < 0.01
+    def target_to_left(vector_from, vector_to) -> bool:
+        vector_from = np.atleast_1d(vector_from)
+        vector_to = np.atleast_1d(vector_to)
+        return np.cross(vector_from[:2], vector_to[:2]) > 0
+
+    def angle(vector_from, vector_to) -> float:
+        vector_from = np.atleast_1d(vector_from)
+        vector_to = np.atleast_1d(vector_to)
+        dot = np.dot(vector_from[:2], vector_to[:2])
+        dst1 = np.linalg.norm(vector_from[:2])
+        dst2 = np.linalg.norm(vector_to[:2])
+        return math.acos(dot / (dst1 * dst2)) *360/(2*math.pi)
+
     def print(self):
-        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z))
+        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front))
 
     def __str__(self):
-        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}]".format(self.model_name, self.id, self.x, self.y, self.z)
+        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front)
 
 
 def parse_marker_string(marker_string):
@@ -23,15 +66,23 @@ def parse_marker_string(marker_string):
     marker_list = marker_string.split('#')[1:]  # Split the string by '#' and remove the empty first element
     markers = []
     for marker in marker_list:
+        is_front = False
         marker_info = marker.split('$')[1].split('[')
         id = int(marker_info[0])
-        coords = marker_info[1].strip(']').split(',')
+        coords = marker_info[1][:-1].strip(']').split(',')
+        if(marker_info[1][-1] == 'T'):
+            is_front = True
         x, y, z = map(float, coords)
-        markers.append(Marker(id, x, y, z, model_name))
+        markers.append(Marker(id, x, y, z, model_name, is_front))
+
+    if(markers[0].model_name == "Platform"):    
+        markers.remove(min(markers, key = lambda x : x.y))
+    
     return markers
 
 def set_socket_server():
-    HOST = '192.168.31.103'   
+    HOST = '192.168.31.103'  
+    #HOST = '10.24.202.119'
     PORT = 9999
     
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,9 +91,13 @@ def set_socket_server():
 
 def recv_data(socket_server):
     header = socket_server.recv(10).decode()
-    message_length = int(header)
-    data = socket_server.recv(message_length).decode()
-    markers_list = parse_marker_string(data)
+    try:
+        message_length = int(header)
+        data = socket_server.recv(message_length).decode()
+        #return data
+        markers_list = parse_marker_string(data)
+    except:
+        return None
     return markers_list
 
 def main():    
@@ -52,13 +107,26 @@ def main():
     while True:
         print("___________________________")
         markers_list = recv_data(server)
-        if len(markers_list) == 3:
+
+        if markers_list[0].model_name == "Platform":
             platfrom_markers = markers_list
         else:
             target_markers = markers_list
-        for marker in markers_list:
+
+        for marker in platfrom_markers:
             print(marker)
+
+        if(len(target_markers)):
+            target_center = Marker.center(target_markers)
+            print("TARGER CENTER: ", target_center)
+
         print("___________________________")
+
+    # test_markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
+    #                  Marker(2, 0, 0, 0, "Targer", False)]
+    
+    # print(Marker.colinear(test_markers_list))
+
 
 if __name__ == "__main__":
     main()
