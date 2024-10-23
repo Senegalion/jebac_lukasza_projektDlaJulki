@@ -8,11 +8,7 @@ import math
 class Marker:
     def __init__(self, id, x, y, z, model_name, is_front):
         self.id = id
-<<<<<<< HEAD
         self.is_front = False
-=======
-        self.is_front = is_front
->>>>>>> 579b86bb895a10635425fb0e52e6dce0e22109e2
         self.x = x
         self.y = y
         self.z = z
@@ -81,7 +77,7 @@ def parse_marker_string(marker_string):
     return markers
 
 def set_socket_server():
-    HOST = '192.168.31.103'  
+    HOST = '192.168.31.2'  
     #HOST = '10.24.202.119'
     PORT = 9999
     

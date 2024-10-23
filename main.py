@@ -3,6 +3,7 @@ import time
 import serial
 import time
 from rplidar import RPLidar
+from rplidar import RPLidarException
 import math
 import PythonClient as PC
 import copy
@@ -87,7 +88,18 @@ class LidarThread(threading.Thread):
         iterator = self.lidar.iter_scans()
 
         while self.running:
-            scan = next(iterator)
+            try:
+                scan = next(iterator)
+            except RPLidarException:
+                self.lidar.stop()
+                self.lidar.stop_motor()
+                self.lidar.disconnect()
+                time.sleep(1)
+                self.lidar.connect()
+                self.lidar.start_motor
+                iterator = self.lidar.iter_scans()
+                print("Error handling ended RPLIDAR ERROR")
+                continue
             for item in scan:
                 angle = item[1]
                 if not self.usefull_angle(angle):
