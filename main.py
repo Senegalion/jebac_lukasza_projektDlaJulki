@@ -170,6 +170,7 @@ class MainThread(threading.Thread):
         self.serialcomm = serial.Serial('COM5', 19200) # architecture based
 
     def run(self):
+        global _running
         direction = "x"
         self.serialcomm.timeout = 0  # 1?
         while _running:
@@ -217,6 +218,7 @@ class MainThread(threading.Thread):
         time.sleep(1)  # 2?
 
     def go_around(self):
+        global _running
         print("is in go_around")
         saw = False
         if self.lidar_thread.check_safety("a"):
@@ -229,9 +231,9 @@ class MainThread(threading.Thread):
             print("HELP")
             return
         print(chosen_direction)
-        while self.lidar_thread.check_safety(chosen_direction):
+        while self.lidar_thread.check_safety(chosen_direction) and _running:
             self.motor_mov(chosen_direction)
-            while not self.lidar_thread.check_safety("w"):
+            while not self.lidar_thread.check_safety("w") and _running:
                 time.sleep(0.1)
                 pass
             self.motor_mov("x")
@@ -239,7 +241,7 @@ class MainThread(threading.Thread):
             time.sleep(1)
             self.motor_mov("w")
             print("w")
-            while self.lidar_thread.check_safety("w"):
+            while self.lidar_thread.check_safety("w") and _running:
                 
                 if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
@@ -313,6 +315,7 @@ class MainThread(threading.Thread):
         print("finished goto_target")
 
     def goto_target_vector(self):
+        global _running
         if len(self.optitrack_thread.target_markers) == 0:
             print("no target ye")
             return
