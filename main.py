@@ -11,6 +11,7 @@ import logging
 import numpy as np
 
 logging.getLogger("rplidar").setLevel(logging.ERROR)
+_running = True
 
 
 
@@ -34,7 +35,6 @@ class LidarThread(threading.Thread):
 
         self.last_region = "w"
 
-        self.running = True
         self.PORT_NAME = 'COM7'
         self.lidar = RPLidar(self.PORT_NAME)
         
@@ -84,10 +84,10 @@ class LidarThread(threading.Thread):
                 self.safe_areas_ins["a"] = False
 
     def run(self):
-        SAFEDST = 400
+        global _running
         iterator = self.lidar.iter_scans()
 
-        while self.running:
+        while _running:
             try:
                 scan = next(iterator)
             except RPLidarException:
@@ -110,15 +110,6 @@ class LidarThread(threading.Thread):
                 
                 self.set_safety_flags(x, y)
 
-                # if y >= -170 and y <= 170 and x < 0:
-                #     self.safe_w = (x < -225 - SAFEDST)
-                # if x >= -240 and x <= 240 and y > 0:
-                #     self.safe_d =  (y > 158 + SAFEDST)
-                # if y >= -170 and y <= 170 and x > 0:
-                #     self.safe_s = (x > 228 + SAFEDST)
-                # if x >= -240 and x <= 240 and y < 0:
-                #     self.safe_a = (y < -158 - SAFEDST)
-                # print(self.safe_w, self.safe_d, self.safe_s, self.safe_a)
                 
         self.lidar.stop()
         self.lidar.disconnect()
@@ -128,38 +119,36 @@ class LidarThread(threading.Thread):
         if direction in ["w", "s", "a", "d"]:
             return self.safe_areas_out[direction]
         return True
-    
-    def stop(self):
-        self.running = False
+
 
 class InputThread(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.running = True 
         self.command = "x"
 
     def run(self):
-        while self.running:
+        global _running
+        while _running:
             inp = input("Enter input> ")
-            if inp in ["x", "w", "s", "a", "d", "q", "e", "t","b"]:
+            if inp in ["x", "w", "s", "a", "d", "q", "e", "t"]:
                 self.command = inp
+            elif inp == "b":
+                _running = False
             else:
                 print("Unknown command")
         print("input_stop")
 
-    def stop(self):
-        self.running = False
 
 class OptTrackThread(threading.Thread):
     def __init__(self):
         super().__init__()
-        self.running = True 
         self.target_markers = []
         self.platform_markers = []
 
     def run(self):
+        global _running
         server = PC.set_socket_server()
-        while self.running:
+        while _running:
             markers_list = PC.recv_data(server)
             if markers_list is None:
                 continue
@@ -170,10 +159,6 @@ class OptTrackThread(threading.Thread):
                 self.target_markers = markers_list
         print("optitrack_stop")
 
-
-
-    def stop(self):
-        self.running = False
 
 class MainThread(threading.Thread):
     def __init__(self, lidar_thread, optitrack_thread, input_thread):
@@ -187,7 +172,7 @@ class MainThread(threading.Thread):
     def run(self):
         direction = "x"
         self.serialcomm.timeout = 0  # 1?
-        while True:
+        while _running:
             command = self.input_thread.command
             if self.lidar_thread.check_safety(direction = direction) == False:
                 direction = "x"
@@ -199,7 +184,6 @@ class MainThread(threading.Thread):
                 self.input_thread.command = "x"
                 self.motor_mov("x")
             if command == "b":
-                print('finished')
                 break
             if command == "t":
                 self.goto_target()
@@ -212,9 +196,6 @@ class MainThread(threading.Thread):
             
         time.sleep(1)
         self.motor_mov("x")
-        self.lidar_thread.stop()
-        self.optitrack_thread.stop()
-        self.input_thread.stop()
         self.serialcomm.close()
         print("main_stop")
         
@@ -273,6 +254,7 @@ class MainThread(threading.Thread):
             saw = False
 
     def goto_target(self):
+        global _running
         if len(self.optitrack_thread.target_markers) == 0:
             print("no target ye")
             return
@@ -284,7 +266,7 @@ class MainThread(threading.Thread):
 
         if PC.Marker.colinear([front, back, target]) and front.distanceSquared(target) < back.distanceSquared(target):
             self.motor_mov("w")
-            while front.distanceSquared(target) > 0.04 and self.input_thread.command == "t":
+            while front.distanceSquared(target) > 0.04 and _running:
                 if not self.lidar_thread.check_safety("w"):
                     self.go_around()
                     return
@@ -309,7 +291,7 @@ class MainThread(threading.Thread):
                 command = "going q"
         
         print(command)
-        while not PC.Marker.colinear([front, back, target]):
+        while not PC.Marker.colinear([front, back, target]) and _running:
             if not self.lidar_thread.check_safety("w"):
                 self.go_around()
                 return
@@ -321,7 +303,7 @@ class MainThread(threading.Thread):
         time.sleep(0.3)
         self.motor_mov("w")
         print("w")
-        while front.distanceSquared(target) > 0.04:
+        while front.distanceSquared(target) > 0.04 and _running:
             front, back = self.front_back()
             if not self.lidar_thread.check_safety("w"):
                 self.go_around()
@@ -344,7 +326,7 @@ class MainThread(threading.Thread):
 
         go_left = PC.Marker.target_to_left(p_vector, t_vector)
         ANGLE = 10  # degrees
-        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and self.input_thread.command != "b":
+        while(PC.Marker.angle(p_vector, t_vector) > ANGLE) and _running:
             if go_left:
                 self.motor_mov("q")
                 print(f"go q")
@@ -354,7 +336,7 @@ class MainThread(threading.Thread):
         print("angle corrected")
 
         tmp = False
-        while PC.Marker.distanceSquared > 0.04 and self.input_thread.command != "b":
+        while PC.Marker.distanceSquared > 0.04 and _running:
             if not self.check_safety("w"):
                 self.motor_mov("x")
                 time.sleep(1)
