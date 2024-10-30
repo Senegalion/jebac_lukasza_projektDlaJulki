@@ -305,7 +305,7 @@ class MainThread(threading.Thread):
         time.sleep(0.3)
         self.motor_mov("w")
         print("w")
-        while front.distanceSquared(target) > 0.04 and _running:
+        while front.distanceSquared(target) > 0.09 and _running:
             front, back = self.front_back()
             if not self.lidar_thread.check_safety("w"):
                 self.go_around()
