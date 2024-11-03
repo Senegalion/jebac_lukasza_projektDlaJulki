@@ -12,7 +12,6 @@ import numpy as np
 logging.getLogger("rplidar").setLevel(logging.ERROR)
 
 
-
 class LidarThread(threading.Thread):
     def __init__(self):
         super().__init__()

@@ -5,6 +5,7 @@ import string
 import numpy as np
 import math
 
+
 class Marker:
     def __init__(self, id, x, y, z, model_name, is_front):
         self.id = id
@@ -13,10 +14,9 @@ class Marker:
         self.y = y
         self.z = z
         self.model_name = model_name
-    
-    def distanceSquared(self, marker):
-        return (self.x - marker.x)**2 + (self.z - marker.z)**2
 
+    def distanceSquared(self, marker):
+        return (self.x - marker.x) ** 2 + (self.z - marker.z) ** 2
 
     def center(markers_list):
         center_coordinates = [0, 0, 0]
@@ -29,7 +29,7 @@ class Marker:
             center_coordinates[i] = center_coordinates[i] / len(markers_list)
 
         return center_coordinates
-    
+
     def colinear(markers_list):
         slope1 = (markers_list[0].z - markers_list[1].z) * (markers_list[0].x - markers_list[2].x)
         slope2 = (markers_list[0].z - markers_list[2].z) * (markers_list[0].x - markers_list[1].x)
@@ -37,6 +37,7 @@ class Marker:
         print(slope2)
 
         return abs(slope1 - slope2) < 0.01
+
     def target_to_left(vector_from, vector_to) -> bool:
         vector_from = np.atleast_1d(vector_from)
         vector_to = np.atleast_1d(vector_to)
@@ -48,13 +49,17 @@ class Marker:
         dot = np.dot(vector_from[:2], vector_to[:2])
         dst1 = np.linalg.norm(vector_from[:2])
         dst2 = np.linalg.norm(vector_to[:2])
-        return math.acos(dot / (dst1 * dst2)) *360/(2*math.pi)
+        return math.acos(dot / (dst1 * dst2)) * 360 / (2 * math.pi)
 
     def print(self):
-        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front))
+        print("Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id,
+                                                                                              self.x, self.y, self.z,
+                                                                                              self.is_front))
 
     def __str__(self):
-        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id, self.x, self.y, self.z, self.is_front)
+        return "Model_name: {} | Marker id: {} | Points xyz: [{},{},{}] | Is front: {}".format(self.model_name, self.id,
+                                                                                               self.x, self.y, self.z,
+                                                                                               self.is_front)
 
 
 def parse_marker_string(marker_string):
@@ -66,37 +71,41 @@ def parse_marker_string(marker_string):
         marker_info = marker.split('$')[1].split('[')
         id = int(marker_info[0])
         coords = marker_info[1][:-1].strip(']').split(',')
-        if(marker_info[1][-1] == 'T'):
+        if (marker_info[1][-1] == 'T'):
             is_front = True
         x, y, z = map(float, coords)
         markers.append(Marker(id, x, y, z, model_name, is_front))
 
-    if(markers[0].model_name == "Platform"):    
-        markers.remove(min(markers, key = lambda x : x.y))
-    
+    if (markers[0].model_name == "Platform"):
+        markers.remove(min(markers, key=lambda x: x.y))
+
     return markers
 
+
 def set_socket_server():
-    HOST = '192.168.31.103'  
-    #HOST = '10.24.202.119'
+    HOST = '192.168.31.2'
+    # HOST = '192.168.31.103'#
+    # HOST = '10.24.202.119'
     PORT = 9999
-    
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((HOST, PORT))
     return s
+
 
 def recv_data(socket_server):
     header = socket_server.recv(10).decode()
     try:
         message_length = int(header)
         data = socket_server.recv(message_length).decode()
-        #return data
+        # return data
         markers_list = parse_marker_string(data)
     except:
         return None
     return markers_list
 
-def main():    
+
+def main():
     platfrom_markers = []
     target_markers = []
     server = set_socket_server()
@@ -112,7 +121,7 @@ def main():
         for marker in platfrom_markers:
             print(marker)
 
-        if(len(target_markers)):
+        if (len(target_markers)):
             target_center = Marker.center(target_markers)
             print("TARGER CENTER: ", target_center)
 
@@ -120,7 +129,7 @@ def main():
 
     # test_markers_list = [Marker(0, -1.0, 0.41, 0.93, "Targer", False), Marker(1, 1.0, -0.41, -0.93, "Targer", False),
     #                  Marker(2, 0, 0, 0, "Targer", False)]
-    
+
     # print(Marker.colinear(test_markers_list))
 
 
