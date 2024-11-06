@@ -176,10 +176,10 @@ class MainThread(threading.Thread):
         while _running:
             command = self.input_thread.command
             if self.lidar_thread.check_safety(direction = direction) == False:
+                print(f"obstacle at '{direction}'")
                 direction = "x"
                 self.input_thread.command = "x"
                 self.motor_mov(direction)
-                print("unsafe direction! command x")
 
             if command == "x" and direction != "x":
                 direction = "x"
@@ -192,9 +192,12 @@ class MainThread(threading.Thread):
                 direction = "x"
                 self.input_thread.command = "x"
                 continue
-            if command in ["w", "s", "a", "d", "e", "q"] and direction == "x" and self.lidar_thread.check_safety(command):
-                direction = command            
-                self.motor_mov(direction)
+            if command in ["w", "s", "a", "d", "e", "q"] and direction == "x":
+                if self.lidar_thread.check_safety(command):
+                    direction = command            
+                    self.motor_mov(direction)
+                else:
+                    print(f"unsafe to go '{command}")
             
         time.sleep(1)
         self.motor_mov("x")
