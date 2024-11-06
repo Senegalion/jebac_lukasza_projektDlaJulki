@@ -85,7 +85,7 @@ class LidarThread(threading.Thread):
 
     def run(self):
         global _running
-        iterator = self.lidar.iter_scans()
+        iterator = self.lidar.iter_scans(min_len=100, max_buf_meas=False)
 
         while _running:
             try:
@@ -179,6 +179,7 @@ class MainThread(threading.Thread):
                 direction = "x"
                 self.input_thread.command = "x"
                 self.motor_mov(direction)
+                print("unsafe direction! command x")
 
             if command == "x" and direction != "x":
                 direction = "x"
@@ -191,7 +192,7 @@ class MainThread(threading.Thread):
                 direction = "x"
                 self.input_thread.command = "x"
                 continue
-            if command in ["w", "s", "a", "d", "e", "q"] and direction == "x" and self.check_safety(command):
+            if command in ["w", "s", "a", "d", "e", "q"] and direction == "x" and self.lidar_thread.check_safety(command):
                 direction = command            
                 self.motor_mov(direction)
             
