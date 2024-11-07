@@ -175,6 +175,7 @@ class MainThread(threading.Thread):
         self.serialcomm.timeout = 0  # 1?
         while _running:
             command = self.input_thread.command
+            time.sleep(0.05) # check fix HERE <<<<<<============================================
             if self.lidar_thread.check_safety(direction = direction) == False:
                 print(f"obstacle at '{direction}'")
                 direction = "x"
