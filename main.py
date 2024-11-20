@@ -167,7 +167,7 @@ class MainThread(threading.Thread):
         self.optitrack_thread = optitrack_thread
         self.input_thread = input_thread
         self.command = ""
-        self.serialcomm = serial.Serial('COM5', 19200) # architecture based
+        self.serialcomm = serial.Serial('COM6', 19200) # architecture based
 
     def run(self):
         global _running
@@ -175,7 +175,8 @@ class MainThread(threading.Thread):
         self.serialcomm.timeout = 0  # 1?
         while _running:
             command = self.input_thread.command
-            time.sleep(0.05) # check fix HERE <<<<<<============================================
+            time.sleep(0.05)
+            # print("", end="") 
             if self.lidar_thread.check_safety(direction = direction) == False:
                 print(f"obstacle at '{direction}'")
                 direction = "x"
@@ -199,6 +200,7 @@ class MainThread(threading.Thread):
                     self.motor_mov(direction)
                 else:
                     print(f"unsafe to go '{command}")
+        print("here")
             
         time.sleep(1)
         self.motor_mov("x")
@@ -216,14 +218,20 @@ class MainThread(threading.Thread):
         return front, back
 
     def motor_mov(self, i):
+        # print("1")
         i.strip()
-        self.serialcomm.write(i.encode())
+        # self.serialcomm.write(i.encode()) commented for software testing
+        # print("2")
         if i == 'x':
             print("command x")
         time.sleep(1)  # 2?
 
+    def rotate(self, dir, angle):
+        print("Rotating in direction: " + dir + "by " + str(angle))
+
     def go_around(self):
         global _running
+        "--direction initialization--"
         print("is in go_around")
         saw = False
         if self.lidar_thread.check_safety("a"):
@@ -235,30 +243,37 @@ class MainThread(threading.Thread):
         else:
             print("HELP")
             return
+        "--avoidance loop--"
         print(chosen_direction)
-        while self.lidar_thread.check_safety(chosen_direction) and _running:
-            self.motor_mov(chosen_direction)
-            while not self.lidar_thread.check_safety("w") and _running:
+
+        while _running:
+            self.rotate(chosen_direction, 90)
+            self.motor_mov("w")
+
+            while not self.lidar_thread.check_safety(opposite_direction) and _running:
                 time.sleep(0.1)
                 pass
+            
             self.motor_mov("x")
-            print("x")
-            time.sleep(1)
+            self.rotate(opposite_direction, 90)
             self.motor_mov("w")
-            print("w")
+
             while self.lidar_thread.check_safety("w") and _running:
-                
                 if not self.lidar_thread.check_safety(opposite_direction):
                     saw = True
                     print(f"saw + {saw}")
+
                 if self.lidar_thread.check_safety(opposite_direction) and saw == True:
                     self.motor_mov("x")
                     print("x")
                     print("goto_target again")
                     self.goto_target()
                     return
+                
             self.motor_mov("x")
-            saw = False
+            if _running:
+                print("Go around recursive")
+                self.go_around()
 
     def goto_target(self):
         global _running
