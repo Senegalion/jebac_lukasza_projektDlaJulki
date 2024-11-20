@@ -175,6 +175,7 @@ class MainThread(threading.Thread):
         self.serialcomm.timeout = 0  # 1?
         while _running:
             command = self.input_thread.command
+            # print(f"command = {command} \n direction = {direction} \n safe = {self.lidar_thread.check_safety(direction = direction)}")
             if self.lidar_thread.check_safety(direction = direction) == False:
                 print(f"obstacle at '{direction}'")
                 direction = "x"
