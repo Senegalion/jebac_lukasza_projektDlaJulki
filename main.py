@@ -167,7 +167,7 @@ class MainThread(threading.Thread):
         self.optitrack_thread = optitrack_thread
         self.input_thread = input_thread
         self.command = ""
-        self.serialcomm = serial.Serial('COM6', 19200) # architecture based
+        self.serialcomm = serial.Serial('COM4', 19200) # architecture based
 
     def run(self):
         global _running
@@ -176,25 +176,26 @@ class MainThread(threading.Thread):
         while _running:
             command = self.input_thread.command
             time.sleep(0.05)
-            # print("", end="") 
             if self.lidar_thread.check_safety(direction = direction) == False:
                 print(f"obstacle at '{direction}'")
                 direction = "x"
                 self.input_thread.command = "x"
-                self.motor_mov(direction)
+                command = "x"
+                self.motor_mov("x")
+                break
 
             if command == "x" and direction != "x":
                 direction = "x"
                 self.input_thread.command = "x"
                 self.motor_mov("x")
-            if command == "b":
+            elif command == "b":
                 break
-            if command == "t":
+            elif command == "t":
                 self.goto_target()
                 direction = "x"
                 self.input_thread.command = "x"
                 continue
-            if command in ["w", "s", "a", "d", "e", "q"] and direction == "x":
+            elif command in ["w", "s", "a", "d", "e", "q"] and direction == "x":
                 if self.lidar_thread.check_safety(command):
                     direction = command            
                     self.motor_mov(direction)
@@ -218,9 +219,9 @@ class MainThread(threading.Thread):
         return front, back
 
     def motor_mov(self, i):
-        # print("1")
+        
         i.strip()
-        # self.serialcomm.write(i.encode()) commented for software testing
+        self.serialcomm.write(i.encode()) #commented for software testing
         # print("2")
         if i == 'x':
             print("command x")
@@ -228,6 +229,9 @@ class MainThread(threading.Thread):
 
     def rotate(self, dir, angle):
         print("Rotating in direction: " + dir + "by " + str(angle))
+        if dir == "":
+            self.motor_mov("q")
+        
 
     def go_around(self):
         global _running
