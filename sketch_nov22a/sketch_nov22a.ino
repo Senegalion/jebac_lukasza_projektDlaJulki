@@ -30,13 +30,13 @@ void loop() {
     controllerInput=Serial.read();}
 
     switch (controllerInput){
-  case ('w'):
+  case ('s'):
     TCCR1A |= _BV(COM1A0) | _BV(COM1B0); // Załącz tryb Toggle na OC1A i OC1B
     TCCR1B |= _BV(CS11);  
     digitalWrite(8, LOW);                   // Ustaw pin 9 na stały LOW
     digitalWrite(7, HIGH);  
     break;
-  case ('s'):
+  case ('w'):
     digitalWrite(8, HIGH);                   // Ustaw pin 9 na stały LOW
     digitalWrite(7, LOW); 
     TCCR1A |= _BV(COM1A0) | _BV(COM1B0); // Załącz tryb Toggle na OC1A i OC1B
@@ -51,7 +51,8 @@ delay(3500);
         TCCR1A &= ~(_BV(COM1A0) | _BV(COM1B0)); // Wyłącz sterowanie pinami 9 i 10 przez timer
   TCCR1B &= ~_BV(CS11);                   // Wyłącz zegar timera
   digitalWrite(9, LOW);                   // Ustaw pin 9 na stały LOW
-  digitalWrite(10, LOW); 
+  digitalWrite(10, LOW);
+  controllerInput = 'x'; 
       break;
   case ('q'):
       digitalWrite(8, HIGH);                   // Ustaw pin 9 na stały LOW
@@ -63,7 +64,7 @@ delay(3500);
   TCCR1B &= ~_BV(CS11);                   // Wyłącz zegar timera
   digitalWrite(9, LOW);                   // Ustaw pin 9 na stały LOW
   digitalWrite(10, LOW);                 // Włącz timer (prescaler 8)
- 
+  controllerInput = 'x';
       break;
   case ('x'):  
         TCCR1A &= ~(_BV(COM1A0) | _BV(COM1B0)); // Wyłącz sterowanie pinami 9 i 10 przez timer
