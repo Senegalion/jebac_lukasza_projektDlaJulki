@@ -51,36 +51,36 @@ class LidarThread(threading.Thread):
     def set_safety_flags(self, x, y):
         SAFEDST = 400
 
-        if y >= -170 and y <= 170 and x < 0:
-            if self.last_region != "w":
-                self.safe_areas_out["d"] = self.safe_areas_ins["d"]
-                self.safe_areas_ins["d"] = True
-                self.last_region = "w"
-            if not (x < -225 - SAFEDST):
-                self.safe_areas_ins["w"] = False
-
-        if x >= -240 and x <= 240 and y > 0:
-            if self.last_region != "d":
-                self.safe_areas_out["s"] = self.safe_areas_ins["s"]
-                self.safe_areas_ins["s"] = True
-                self.last_region = "d"
-            if not (y > 158 + SAFEDST):
-                self.safe_areas_ins["d"] = False
-
         if y >= -170 and y <= 170 and x > 0:
-            if self.last_region != "s":
+            if self.last_region != "w":
                 self.safe_areas_out["a"] = self.safe_areas_ins["a"]
                 self.safe_areas_ins["a"] = True
-                self.last_region = "s"
+                self.last_region = "w"
             if not (x > 228 + SAFEDST):
-                self.safe_areas_ins["s"] = False
+                self.safe_areas_ins["w"] = False
 
         if x >= -240 and x <= 240 and y < 0:
-            if self.last_region != "a":
+            if self.last_region != "d":
                 self.safe_areas_out["w"] = self.safe_areas_ins["w"]
                 self.safe_areas_ins["w"] = True
-                self.last_region = "a"
+                self.last_region = "d"
             if not (y < -158 - SAFEDST):
+                self.safe_areas_ins["d"] = False
+
+        if y >= -170 and y <= 170 and x < 0:
+            if self.last_region != "s":
+                self.safe_areas_out["d"] = self.safe_areas_ins["d"]
+                self.safe_areas_ins["d"] = True
+                self.last_region = "s"
+            if not (x < -225 - SAFEDST):
+                self.safe_areas_ins["s"] = False
+
+        if x >= -240 and x <= 240 and y > 0:
+            if self.last_region != "a":
+                self.safe_areas_out["s"] = self.safe_areas_ins["s"]
+                self.safe_areas_ins["s"] = True
+                self.last_region = "a"
+            if not (y > 158 + SAFEDST):
                 self.safe_areas_ins["a"] = False
 
     def run(self):
@@ -182,7 +182,7 @@ class MainThread(threading.Thread):
                 self.input_thread.command = "x"
                 command = "x"
                 self.motor_mov("x")
-                break
+                continue
 
             if command == "x" and direction != "x":
                 direction = "x"
@@ -201,6 +201,7 @@ class MainThread(threading.Thread):
                     self.motor_mov(direction)
                 else:
                     print(f"unsafe to go '{command}")
+                    self.input_thread.command = 'x'
         print("here")
             
         time.sleep(1)
