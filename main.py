@@ -319,9 +319,6 @@ class MainThread(threading.Thread):
         
         print(command)
         while not PC.Marker.colinear([front, back, target]) and _running:
-            if not self.lidar_thread.check_safety("w"):
-                self.go_around()
-                return
             front, back = self.front_back()
             time.sleep(0.1)
             
@@ -364,7 +361,7 @@ class MainThread(threading.Thread):
         print("angle corrected")
 
         tmp = False
-        while PC.Marker.distanceSquared > 0.04 and _running:
+        while PC.Marker.distanceSquared > 0.09 and _running:
             if not self.check_safety("w"):
                 self.motor_mov("x")
                 time.sleep(1)
