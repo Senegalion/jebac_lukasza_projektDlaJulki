@@ -1,21 +1,36 @@
+import math
 import time
 import tkinter as tk
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageTk, ImageDraw
-import PythonClient
+from PythonClient import set_socket_server, recv_data, Marker, get_static_marker_data
 
 ACCEPTABLE_TIME = 1
 THRESHOLD_ANGLE_CHANGE = 1
 THRESHOLD_CURVATURE_CHANGE = 1
-THRESHOLD_DELTA_H_CHANGE = 2
 THRESHOLD_DISTANCE_CHANGE = 5
 
 last_alert_times = [time.time()] * 6
 alert_states = [''] * 6
 last_angles = [None] * 6
 last_points = None
-use_simulated_data = True
+
+marker_mapping = {
+    1: "Left Elbow", 2: "Left Front Hip", 3: "Right Back Hip", 4: "Left Back Hip",
+    5: "Back Top", 6: "Back Right", 7: "Right Front Hip", 8: "Chest", 9: "Head Top",
+    10: "Head Front", 11: "Head Side", 12: "Left Shoulder Top", 13: "Back Left",
+    14: "Left Upper Arm High", 15: "Left Shoulder Back", 16: "Left Upper Back",
+    17: "Left Upper Front", 18: "Left Lower Back", 19: "Right Shoulder Top",
+    20: "Right Shoulder Back", 21: "Right Upper Arm High", 22: "Right Elbow",
+    23: "Right Upper Back", 24: "Right Upper Front", 25: "Right Lower Back",
+    26: "Left Front Knee", 27: "Left Side Knee", 28: "Left Shin", 29: "Left Foot Back Left",
+    30: "Left Foot Back Right", 31: "Left Foot Front Right", 32: "Left Foot Front Left",
+    33: "Left Foot Top", 34: "Right Front Knee", 35: "Right Side Knee", 36: "Right Shin",
+    37: "Right Foot Back Right", 38: "Right Foot Back Left", 39: "Right Foot Front Left",
+    40: "Right Foot Front Right", 41: "Right Foot Top"
+}
+
 
 image_window = tk.Tk()
 image_window.title("Angle Monitoring System - Image")
@@ -43,18 +58,6 @@ mapping_matrix = {
     "toes": [245, 387],
     "table": [230, 180]
 }
-
-points = [
-    [0, 0, 95],  # neck
-    [0, 0, 85],  # shoulder
-    [10, 0, 60],  # elbow
-    [50, 0, 65],  # hand
-    [0, 0, 40],  # hips
-    [50, 0, 40],  # knee
-    [50, 0, 0],  # heel
-    [75, 0, 56],  # toes
-    [30, 0, 60]  # table
-]
 
 acceptable_ranges = [[90, 105], [90, 105], [75, 90], [90, 105], [0, 5], [60, 95]]
 
@@ -95,6 +98,23 @@ def update_image(points_of_the_body, alert_states):
 def get_alert(value, acceptable_range, index):
     global last_alert_times, alert_states
     current_time = time.time()
+
+    # curvature left
+    if index == 4:
+        if value < acceptable_range[0] or value > acceptable_range[1]:
+            if current_time - last_alert_times[index] >= ACCEPTABLE_TIME:
+                last_alert_times[index] = current_time
+                alert_states[index] = '●'
+            return alert_states[index]
+
+    # curvature right
+    elif index == 5:
+        if value < acceptable_range[0] or value > acceptable_range[1]:
+            if current_time - last_alert_times[index] >= ACCEPTABLE_TIME:
+                last_alert_times[index] = current_time
+                alert_states[index] = '●'
+            return alert_states[index]
+
     if value < acceptable_range[0] or value > acceptable_range[1]:
         if current_time - last_alert_times[index] >= ACCEPTABLE_TIME:
             last_alert_times[index] = current_time
@@ -105,95 +125,115 @@ def get_alert(value, acceptable_range, index):
         return ''
 
 
-def calculate_alpha1(points_of_the_body):
-    shoulder = np.array(points_of_the_body[1])
-    elbow = np.array(points_of_the_body[2])
-    hand = np.array(points_of_the_body[3])
+def calculate_angle(a, b, c):
+    AB = np.array([b.x - a.x, b.y - a.y, b.z - a.z])
+    BC = np.array([c.x - b.x, c.y - b.y, c.z - b.z])
 
-    vector_elbow_shoulder = shoulder - elbow
-    vector_elbow_hand = hand - elbow
+    dot_product = np.dot(AB, BC)
+    mag_AB = np.linalg.norm(AB)
+    mag_BC = np.linalg.norm(BC)
 
-    cosine_alpha1 = np.dot(vector_elbow_shoulder, vector_elbow_hand) / (
-            np.linalg.norm(vector_elbow_shoulder) * np.linalg.norm(vector_elbow_hand))
+    cos_angle = dot_product / (mag_AB * mag_BC)
 
-    alpha1 = np.arccos(cosine_alpha1) * (180 / np.pi)
+    cos_angle = max(-1, min(1, cos_angle))
 
-    return round(alpha1, 2)
+    angle_rad = np.arccos(cos_angle)
+    angle_deg = math.degrees(angle_rad)
 
-
-def calculate_alpha2(points_of_the_body):
-    heel = np.array(points_of_the_body[6])
-    knee = np.array(points_of_the_body[5])
-    hips = np.array(points_of_the_body[4])
-
-    vector_knee_heel = heel - knee
-    vector_knee_hips = hips - knee
-
-    cosine_alpha2 = np.dot(vector_knee_heel, vector_knee_hips) / (
-            np.linalg.norm(vector_knee_heel) * np.linalg.norm(vector_knee_hips))
-
-    alpha2 = np.arccos(cosine_alpha2) * (180 / np.pi)
-
-    return round(alpha2, 2)
+    return angle_deg
 
 
-def calculate_alpha3(points_of_the_body):
-    knee = np.array(points_of_the_body[5])
-    heel = np.array(points_of_the_body[6])
-    toes = np.array(points_of_the_body[7])
+def compute_elbow_angles(markers_list):
+    left_shoulder_top_marker = markers_list[12 - 1]
+    left_upper_arm_high_marker = markers_list[14 - 1]
+    left_elbow_marker = markers_list[1 - 1]
 
-    vector_heel_knee = knee - heel
-    vector_heel_toes = toes - heel
+    right_shoulder_top_marker = markers_list[19 - 1]
+    right_upper_arm_high_marker = markers_list[21 - 1]
+    right_elbow_marker = markers_list[22 - 1]
 
-    cosine_alpha3 = np.dot(vector_heel_knee, vector_heel_toes) / (
-            np.linalg.norm(vector_heel_knee) * np.linalg.norm(vector_heel_toes))
+    left_elbow_angle = calculate_angle(left_shoulder_top_marker, left_upper_arm_high_marker, left_elbow_marker)
+    right_elbow_angle = calculate_angle(right_shoulder_top_marker, right_upper_arm_high_marker, right_elbow_marker)
 
-    alpha3 = np.arccos(cosine_alpha3) * (180 / np.pi)
-
-    return round(alpha3, 2)
-
-
-def calculate_alpha4(points_of_the_body):
-    shoulder = np.array(points_of_the_body[1])
-    hips = np.array(points_of_the_body[4])
-    knee = np.array(points_of_the_body[5])
-
-    vector_hips_shoulder = shoulder - hips
-    vector_hips_knee = knee - hips
-
-    cosine_alpha4 = np.dot(vector_hips_shoulder, vector_hips_knee) / (
-            np.linalg.norm(vector_hips_shoulder) * np.linalg.norm(vector_hips_knee))
-
-    alpha4 = np.arccos(cosine_alpha4) * (180 / np.pi)
-
-    return round(alpha4, 2)
+    return left_elbow_angle, right_elbow_angle
 
 
-def calculate_curvature(points_of_the_body):
-    neck = np.array(points_of_the_body[0])
-    shoulder = np.array(points_of_the_body[1])
-    hips = np.array(points_of_the_body[4])
+def compute_hip_angles(markers_list):
+    left_shoulder_top_marker = markers_list[12 - 1]
+    left_front_hip_marker = markers_list[2 - 1]
+    left_front_knee_marker = markers_list[26 - 1]
 
-    vector_shoulder_neck = neck - shoulder
-    vector_shoulder_hips = hips - shoulder
+    right_shoulder_top_marker = markers_list[19 - 1]
+    right_front_hip_marker = markers_list[7 - 1]
+    right_front_knee_marker = markers_list[34 - 1]
 
-    cosine_curvature = np.dot(vector_shoulder_neck, vector_shoulder_hips) / (
-            np.linalg.norm(vector_shoulder_neck) * np.linalg.norm(vector_shoulder_hips))
+    left_hip_angle = calculate_angle(left_shoulder_top_marker, left_front_hip_marker, left_front_knee_marker)
+    right_hip_angle = calculate_angle(right_shoulder_top_marker, right_front_hip_marker, right_front_knee_marker)
 
-    curvature = np.arccos(cosine_curvature) * (180 / np.pi)
-
-    return round(curvature, 2)
+    return left_hip_angle, right_hip_angle
 
 
-def calculate_angles(points_of_the_body):
+def compute_knee_angles(markers_list):
+    left_front_hip_marker = markers_list[2 - 1]
+    left_front_knee_marker = markers_list[26 - 1]
+    left_foot_back_right = markers_list[30 - 1]
+
+    right_front_hip_marker = markers_list[7 - 1]
+    right_front_knee_marker = markers_list[34 - 1]
+    right_foot_back_left = markers_list[38 - 1]
+
+    left_knee_angle = calculate_angle(left_front_hip_marker, left_front_knee_marker, left_foot_back_right)
+
+    right_knee_angle = calculate_angle(right_front_hip_marker, right_front_knee_marker, right_foot_back_left)
+
+    return left_knee_angle, right_knee_angle
+
+
+def compute_ankle_angles(markers_list):
+    left_front_knee_marker = markers_list[26 - 1]
+    left_foot_back_right_marker = markers_list[30 - 1]
+    left_foot_top_marker = markers_list[33 - 1]
+
+    right_front_knee_marker = markers_list[34 - 1]
+    right_foot_back_left_marker = markers_list[38 - 1]
+    right_foot_top_marker = markers_list[41 - 1]
+
+    left_ankle_angle = calculate_angle(left_front_knee_marker, left_foot_back_right_marker, left_foot_top_marker)
+    right_ankle_angle = calculate_angle(right_front_knee_marker, right_foot_back_left_marker, right_foot_top_marker)
+
+    return left_ankle_angle, right_ankle_angle
+
+
+def calculate_curvature(left_shoulder, left_hip, right_shoulder, right_hip):
+    left_vector = np.array([left_shoulder.x, left_shoulder.y, left_shoulder.z]) - np.array(
+        [left_hip.x, left_hip.y, left_hip.z])
+    left_curvature = np.linalg.norm(left_vector)
+
+    right_vector = np.array([right_shoulder.x, right_shoulder.y, right_shoulder.z]) - np.array(
+        [right_hip.x, right_hip.y, right_hip.z])
+    right_curvature = np.linalg.norm(right_vector)
+
+    return left_curvature, right_curvature
+
+
+def calculate_angles(markers_list):
     angles = [
-        calculate_alpha1(points_of_the_body),
-        calculate_alpha2(points_of_the_body),
-        calculate_alpha3(points_of_the_body),
-        calculate_alpha4(points_of_the_body),
-        points_of_the_body[8][2] - points_of_the_body[2][2],  # Δh in cm
-        calculate_curvature(points_of_the_body)
+        compute_elbow_angles(markers_list),
+        compute_knee_angles(markers_list),
+        compute_ankle_angles(markers_list),
+        compute_hip_angles(markers_list)
     ]
+
+    left_shoulder = markers_list[12 - 1]
+    left_hip = markers_list[2 - 1]
+    right_shoulder = markers_list[19 - 1]
+    right_hip = markers_list[7 - 1]
+
+    left_curvature, right_curvature = calculate_curvature(left_shoulder, left_hip, right_shoulder, right_hip)
+
+    angles.append(left_curvature)
+    angles.append(right_curvature)
+
     return angles
 
 
@@ -207,15 +247,10 @@ def filter_angles(angles, last_angles):
     return filtered_angles
 
 
-def filter_delta_h_and_curvature(angles, last_angles):
+def filter_curvature(angles, last_angles):
     filtered_angles = []
     for i, (new, last) in enumerate(zip(angles, last_angles)):
-        if i == 4:  # Δh
-            if abs(new - last) > THRESHOLD_DELTA_H_CHANGE:
-                filtered_angles.append(new)
-            else:
-                filtered_angles.append(last)
-        elif i == 5:  # Curvature
+        if i == 8 or i == 9:  # Curvature
             if abs(new - last) > THRESHOLD_CURVATURE_CHANGE:
                 filtered_angles.append(new)
             else:
@@ -242,24 +277,6 @@ def filter_data(new_points):
     return filtered_points
 
 
-def fetch_optitrack_data():
-    # collected_points = optitrack_api.get_points()
-    # return np.array(collected_points)
-    pass
-
-
-def simulate_optitrack_data():
-    new_points = np.array(points) + np.random.normal(0, 1, np.array(points).shape)
-    visualize_table(new_points, acceptable_ranges)
-    image_window.after(50, simulate_optitrack_data)
-
-
-def update_from_optitrack():
-    new_points = fetch_optitrack_data()
-    visualize_table(new_points, acceptable_ranges)
-    image_window.after(50, update_from_optitrack)
-
-
 def visualize_table(points_used_to_calculate_angles, acceptable_ranges_of_the_points):
     global last_angles, THRESHOLD_ANGLE_CHANGE
 
@@ -271,12 +288,21 @@ def visualize_table(points_used_to_calculate_angles, acceptable_ranges_of_the_po
 
     # Filter angles to only show significant changes
     filtered_angles = filter_angles(angles, last_angles)
-    filtered_angles = filter_delta_h_and_curvature(filtered_angles, last_angles)
+    filtered_angles = filter_curvature(filtered_angles, last_angles)
 
     data = {
-        'Nazwa': ['α1', 'α2', 'α3', 'α4', 'Δh', 'krzywizna'],
-        'Wartości': filtered_angles,
-        'Akceptowalny zakres': acceptable_ranges_of_the_points,
+        'Nazwa': ['Left Elbow Angle',
+                  'Right Elbow Angle',
+                  'Left Hip Angle',
+                  'Right Hip Angle',
+                  'Left Knee Angle',
+                  'Right Knee Angle',
+                  'Left Ankle Angle',
+                  'Right Ankle Angle',
+                  'Left Curvature',
+                  'Right Curvature'],
+        'Values': filtered_angles,
+        'Acceptable range': acceptable_ranges_of_the_points,
         'Alert': [get_alert(value, range_, i) for i, (value, range_) in
                   enumerate(zip(filtered_angles, acceptable_ranges_of_the_points))]
     }
@@ -291,12 +317,19 @@ def visualize_table(points_used_to_calculate_angles, acceptable_ranges_of_the_po
     update_image(filtered_points, alert_states)
 
 
-text_widget = tk.Text(table_window, height=30, width=50)
-text_widget.pack(padx=20, pady=20)
+def update_from_optitrack():
+    markers = recv_data(server)
+    new_markers = [Marker(marker.id, marker.x, marker.y, marker.z) for marker in markers]
+    visualize_table(new_markers, acceptable_ranges)
+    image_window.after(50, update_from_optitrack)
 
-if use_simulated_data:
-    simulate_optitrack_data()
-else:
+
+if __name__ == '__main__':
+    server = set_socket_server()
+
+    text_widget = tk.Text(table_window, height=30, width=50)
+    text_widget.pack(padx=20, pady=20)
+
     update_from_optitrack()
 
-image_window.mainloop()
+    image_window.mainloop()
