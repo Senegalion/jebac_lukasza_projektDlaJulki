@@ -4,7 +4,7 @@ import tkinter as tk
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageTk, ImageDraw
-from PythonClient import set_socket_server, recv_data, Marker, get_static_marker_data
+from PythonClient import set_socket_server, recv_data, Marker
 
 ACCEPTABLE_TIME = 1
 THRESHOLD_ANGLE_CHANGE = 1
