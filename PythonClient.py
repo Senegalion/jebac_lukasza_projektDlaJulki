@@ -43,27 +43,6 @@ class Marker:
                                                                                             self.z)
 
 
-def get_static_marker_data():
-    static_data = [
-        (10, 0.1, 1.5, 0.3), (9, 0.2, 1.6, 0.4), (11, 0.3, 1.4, 0.2),
-        (19, 0.5, 1.2, 0.5), (5, 0.1, 1.1, 0.1), (12, 0.3, 1.3, 0.6),
-        (20, 0.4, 1.2, 0.7), (8, 0.2, 1.0, 0.8), (15, 0.4, 1.0, 0.9),
-        (21, 0.6, 1.1, 1.0), (6, 0.7, 1.0, 0.3), (13, 0.3, 0.9, 0.4),
-        (14, 0.2, 0.8, 0.5), (22, 0.8, 0.7, 0.6), (7, 0.9, 1.0, 0.7),
-        (3, 0.5, 0.9, 0.2), (4, 0.6, 0.9, 0.4), (2, 0.7, 1.2, 0.8),
-        (1, 0.8, 1.1, 0.9), (24, 0.9, 1.3, 1.0), (17, 0.8, 1.4, 1.1),
-        (23, 0.9, 1.5, 1.2), (16, 0.7, 1.5, 1.3), (25, 0.6, 1.6, 1.4),
-        (18, 0.5, 1.7, 1.5), (26, 0.4, 1.8, 1.6), (34, 0.3, 1.9, 1.7),
-        (35, 0.2, 2.0, 1.8), (27, 0.1, 2.1, 1.9), (36, 0.0, 2.2, 2.0),
-        (28, -0.1, 2.3, 2.1), (40, -0.2, 2.4, 2.2), (37, -0.3, 2.5, 2.3),
-        (41, -0.4, 2.6, 2.4), (38, -0.5, 2.7, 2.5), (39, -0.6, 2.8, 2.6),
-        (31, -0.7, 2.9, 2.7), (33, -0.8, 3.0, 2.8), (30, -0.9, 3.1, 2.9),
-        (29, -1.0, 3.2, 3.0), (32, -1.1, 3.3, 3.1)
-    ]
-    markers = [Marker(id, x, y, z) for id, x, y, z in static_data]
-    return markers
-
-
 def parse_marker_string(marker_string):
     marker_list = marker_string.split('#')[1:]  # Split the string by '#' and remove the empty first element
     markers = []
@@ -113,33 +92,35 @@ def main():
             for marker_number, marker in enumerate(markers_list, start=1)
         ]
 
-        # Sort the list by marker.y in descending order
-        sorted_marker_data = sorted(marker_data, key=lambda m: m[1], reverse=True)
-
-        # Group and sort markers within the 0.03 margin
-        grouped_sorted_markers = []
-        visited = [False] * len(sorted_marker_data)  # Keep track of visited markers
-
-        for i, current_marker in enumerate(sorted_marker_data):
-            if visited[i]:
-                continue
-
-            group = [current_marker]
-            visited[i] = True
-
-            for j, other_marker in enumerate(sorted_marker_data):
-                if i != j and not visited[j]:
-                    if abs(current_marker[1] - other_marker[1]) <= 0.03:
-                        group.append(other_marker)
-                        visited[j] = True
-
-            # Sort the group by x in descending order
-            group.sort(key=lambda m: m[0], reverse=True)
-            grouped_sorted_markers.extend(group)
+        print(marker_data)
+        #
+        # # Sort the list by marker.y in descending order
+        # sorted_marker_data = sorted(marker_data, key=lambda m: m[1], reverse=True)
+        #
+        # # Group and sort markers within the 0.03 margin
+        # grouped_sorted_markers = []
+        # visited = [False] * len(sorted_marker_data)  # Keep track of visited markers
+        #
+        # for i, current_marker in enumerate(sorted_marker_data):
+        #     if visited[i]:
+        #         continue
+        #
+        #     group = [current_marker]
+        #     visited[i] = True
+        #
+        #     for j, other_marker in enumerate(sorted_marker_data):
+        #         if i != j and not visited[j]:
+        #             if abs(current_marker[1] - other_marker[1]) <= 0.03:
+        #                 group.append(other_marker)
+        #                 visited[j] = True
+        #
+        #     # Sort the group by x in descending order
+        #     group.sort(key=lambda m: m[0], reverse=True)
+        #     grouped_sorted_markers.extend(group)
 
         # Print the final grouped and sorted markers
-        for data in grouped_sorted_markers:
-            print(f"Marker Number: {data[3]} - x: {data[0]}, y: {data[1]}, z: {data[2]}")
+        # for data in grouped_sorted_markers:
+        #     print(f"Marker Number: {data[3]} - x: {data[0]}, y: {data[1]}, z: {data[2]}")
 
 
 if __name__ == "__main__":
